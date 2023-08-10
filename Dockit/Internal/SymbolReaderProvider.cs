@@ -17,7 +17,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-namespace Dockit;
+namespace Dockit.Internal;
 
 // Imported from ILCompose project.
 // https://github.com/kekyo/ILCompose
@@ -60,7 +60,7 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                 ms.Position = 0;
 
                 var sr = provider.GetSymbolReader(module, ms);
-                if (this.loaded.Add(path))
+                if (loaded.Add(path))
                 {
                     Debug.WriteLine($"Symbol loaded from: {path}");
                 }
@@ -88,7 +88,7 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                 try
                 {
                     var sr = embeddedProvider.GetSymbolReader(module, fullPath);
-                    if (this.loaded.Add(fullPath))
+                    if (loaded.Add(fullPath))
                     {
                         Debug.WriteLine($"Embedded symbol loaded from: {fullPath}");
                     }
@@ -99,16 +99,16 @@ internal sealed class SymbolReaderProvider : ISymbolReaderProvider
                     Debug.WriteLine(ex);
                 }
             }
-            else if (this.TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
+            else if (TryGetSymbolReader(mdbProvider, module, fullPath, ".dll.mdb") is { } sr1)
             {
                 return sr1;
             }
-            else if (this.TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
+            else if (TryGetSymbolReader(pdbProvider, module, fullPath, ".pdb") is { } sr3)
             {
                 return sr3;
             }
 
-            if (this.notFound.Add(fileName))
+            if (notFound.Add(fileName))
             {
                 Debug.WriteLine($"Symbol not found: {fileName}");
             }
