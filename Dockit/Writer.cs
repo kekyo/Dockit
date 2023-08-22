@@ -81,7 +81,8 @@ internal static class Writer
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
-        await tw.WriteLineAsync($"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
+        await tw.WriteLineAsync(
+            $"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
         await tw.WriteLineAsync("```");
 
         await WriteRemarksAsync(tw, dotNetXmlField, hri, ct);
@@ -119,11 +120,13 @@ internal static class Writer
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetGetter(property) is { } gm)
         {
-            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(gm)} get;");
+            await tw.WriteLineAsync(
+                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(gm)} get;");
         }
         if (CecilUtilities.GetSetter(property) is { } sm)
         {
-            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(sm)} set;");
+            await tw.WriteLineAsync(
+                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(sm)} set;");
         }
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
@@ -163,11 +166,13 @@ internal static class Writer
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetAdd(@event) is { } am)
         {
-            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(am)} add;");
+            await tw.WriteLineAsync(
+                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(am)} add;");
         }
         if (CecilUtilities.GetRemove(@event) is { } rm)
         {
-            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(rm)} remove;");
+            await tw.WriteLineAsync(
+                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(rm)} remove;");
         }
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
@@ -228,11 +233,13 @@ internal static class Writer
                     if (dotNetXmlMethod?.TypeParameters.FirstOrDefault(p => p.Name == gan) is { } dotNetParameter &&
                         dotNetParameter.Description is { } description)
                     {
-                        await tw.WriteLineAsync($"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                        await tw.WriteLineAsync(
+                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                     }
                     else
                     {
-                        await tw.WriteLineAsync($"| `{gan}` | |");
+                        await tw.WriteLineAsync(
+                            $"| `{gan}` | |");
                     }
                 }
             }
@@ -243,11 +250,13 @@ internal static class Writer
                 if (dotNetXmlMethod?.TypeParameters.FirstOrDefault(p => p.Name == gpn) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync($"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                    await tw.WriteLineAsync(
+                        $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
-                    await tw.WriteLineAsync($"| `{gpn}` | |");
+                    await tw.WriteLineAsync(
+                        $"| `{gpn}` | |");
                 }
             }
         }
@@ -266,11 +275,13 @@ internal static class Writer
                 if (dotNetXmlMethod?.Parameters.FirstOrDefault(p => p.Name == parameter.Name) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync($"| `{parameter.Name}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                    await tw.WriteLineAsync(
+                        $"| `{parameter.Name}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
-                    await tw.WriteLineAsync($"| `{parameter.Name}` | |");
+                    await tw.WriteLineAsync(
+                        $"| `{parameter.Name}` | |");
                 }
             }
         }
@@ -381,18 +392,49 @@ internal static class Writer
             await tw.WriteLineAsync();
             await WriterUtilities.WriteEnumValuesAsync(tw, type);
             await tw.WriteLineAsync("```");
+
+            /////////////////////////////////////////////////////////
+            // Enum value table.
+
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync("|Enum value|Description|");
+            await tw.WriteLineAsync("|:----|:----|");
+
+            foreach (var field in CecilUtilities.GetFields(type).
+                Where(f => f.IsLiteral).
+                OrderBy(f => f.Constant))
+            {
+                var dotNetXmlFieldName = DotNetXmlNaming.GetDotNetXmlName(field);
+                if (dotNetDocument.Members.TryGetValue(
+                    new(DotNetXmlMemberTypes.Field, dotNetXmlFieldName),
+                    out var dotNetXmlField))
+                {
+                    var summary = dotNetXmlField.Summary is { } s ?
+                        WriterUtilities.RenderDotNetXmlElement(s, true, hri) : "";
+                    var remarks = dotNetXmlField.Remarks is { } r ?
+                        WriterUtilities.RenderDotNetXmlElement(r, true, hri) : "";
+                    await tw.WriteLineAsync(
+                        $"| `{Naming.GetName(field)}` | {summary} {remarks} |");
+                }
+                else
+                {
+                    await tw.WriteLineAsync(
+                        $"| `{Naming.GetName(field)}` | |");
+                }
+            }
         }
         else
         {
             var hasImplementedTypes =
                 (type.BaseType != null && !CecilUtilities.IsObjectType(type.BaseType!)) ||
-                type.Interfaces.Count >= 1;
+                 type.Interfaces.Count >= 1;
 
             await tw.WriteLineAsync();
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync($"{CecilUtilities.GetModifierKeywordString(type)} {Naming.GetName(type)}{(hasImplementedTypes ? " :" : "")}");
+            await tw.WriteLineAsync(
+                $"{CecilUtilities.GetModifierKeywordString(type)} {Naming.GetName(type)}{(hasImplementedTypes ? " :" : "")}");
 
             if (type.BaseType is { } baseType && !CecilUtilities.IsObjectType(baseType))
             {
@@ -596,11 +638,14 @@ internal static class Writer
             var visibleMembers = new VisibleMembers(type);
 
             var members = visibleMembers.OverallMembers;
+            var isEnum = CecilUtilities.IsEnumType(type);
 
             var memberList = string.Join(", ", members.
+                Where(m => !isEnum ||
+                    (m is FieldReference f && f.Resolve().IsLiteral)).
                 // Because all overload methods are same name.
                 DistinctBy(m => Naming.GetName(m)).
-                Select(m => hri.TryGetValue(FullNaming.GetFullName(m), out var id) ? 
+                Select(m => (!isEnum && hri.TryGetValue(FullNaming.GetFullName(m), out var id)) ? 
                     $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ](#{id})" :
                     $"`{Naming.GetName(m, MethodForms.WithBraces)}`"));
             if (memberList.Length >= 1)

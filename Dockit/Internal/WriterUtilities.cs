@@ -95,8 +95,9 @@ internal static class WriterUtilities
         await tw.WriteLineAsync(
             "{");
 
-        var fields = enumType.Fields.
-            Where(f => f.IsPublic && f.IsLiteral).
+        var fields = CecilUtilities.GetFields(enumType).
+            Where(f => f.IsLiteral).
+            OrderBy(f => f.Constant).
             ToArray();
 
         for (var index = 0; index < fields.Length; index++)
@@ -105,12 +106,12 @@ internal static class WriterUtilities
             if (index < fields.Length - 1)
             {
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {field.Constant},");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant)},");
             }
             else
             {
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {field.Constant}");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant)}");
             }
         }
 
@@ -160,7 +161,7 @@ internal static class WriterUtilities
             string candidateIdentity)
         {
             var hashReferenceId =
-                WriterUtilities.EscapePandocFormedHashReferenceIdentity(candidateIdentity).
+                EscapePandocFormedHashReferenceIdentity(candidateIdentity).
                 ToLowerInvariant();
 
             // Avoid duplicated identity by Pandoc formed.
@@ -290,7 +291,7 @@ internal static class WriterUtilities
             var sb2 = new StringBuilder(text);
             sb2.Replace("\r", string.Empty);
             sb2.Replace("\n", string.Empty);
-            sb!.Append(EscapeSpecialCharacters(sb2.ToString()));
+            sb!.Append(sb2.ToString().Trim());
         }
         // Output whitespace trimming text each lines.
         else

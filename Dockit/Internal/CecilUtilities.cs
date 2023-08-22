@@ -48,9 +48,17 @@ internal static class CecilUtilities
 
     public static FieldDefinition[] GetFields(TypeDefinition type) =>
         type.Fields.
-        Where(f => f.IsPublic && IsVisibleByEditorBrowsable(f)).
+        Where(IsVisible).
         OrderBy(Naming.GetName).
         ToArray();
+
+    public static bool IsVisible(FieldDefinition field) =>
+        (field.IsPublic || field.IsFamily || field.IsFamilyOrAssembly) &&
+        IsVisibleByEditorBrowsable(field);
+
+    public static bool IsVisible(PropertyDefinition property) =>
+        (GetGetter(property) is { } || GetSetter(property) is { }) &&
+        IsVisibleByEditorBrowsable(property);
 
     public static bool IsVisible(MethodDefinition method) =>
         (method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly) &&
@@ -78,7 +86,7 @@ internal static class CecilUtilities
 
     public static PropertyDefinition[] GetProperties(TypeDefinition type) =>
         type.Properties.
-        Where(p => GetGetter(p) is { } || GetSetter(p) is { }).
+        Where(IsVisible).
         OrderBy(p => Naming.GetName(p)).
         ToArray();
 
