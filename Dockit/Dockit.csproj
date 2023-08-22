@@ -12,8 +12,4 @@
     <PackageReference Include="Mono.Options" Version="6.12.0.148" />
   </ItemGroup>
 
-  <ItemGroup Condition="('$(TargetFramework)' == 'net45') OR ('$(TargetFramework)' == 'net461') OR ('$(TargetFramework)' == 'net48') OR ('$(TargetFramework)' == 'netstandard2.0') OR ('$(TargetFramework)' == 'netstandard2.1')">
-    <PackageReference Include="Nullability.Source" Version="2.1.0" />
-  </ItemGroup>
-
 </Project>

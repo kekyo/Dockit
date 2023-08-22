@@ -20,16 +20,52 @@ namespace Dockit;
 
 internal static class Writer
 {
+    private static readonly HashSet<string> validAttributes = new()
+    {
+        "System.Reflection.AssemblyFileVersionAttribute",
+        "System.Reflection.AssemblyInformationalVersionAttribute",
+        //"System.Reflection.AssemblyTitleAttribute",
+        //"System.Reflection.AssemblyDescriptionAttribute",
+        //"System.Reflection.AssemblyCopyrightAttribute",
+        //"System.Reflection.AssemblyConfigurationAttribute",
+    };
+
+    private static async Task WriteRemarksAsync(
+        TextWriter tw,
+        DotNetXmlMember? dotNetXmlMember,
+        IReadOnlyDictionary<string, string> hri,
+        CancellationToken ct)
+    {
+        if (dotNetXmlMember?.Remarks is { } memberRemarks)
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberRemarks, false, hri));
+        }
+
+        if (dotNetXmlMember?.Example is { } memberExamples)
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberExamples, false, hri));
+        }
+
+        if (dotNetXmlMember?.SeeAlso is { } memberSeeAlso)
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync($"See also: {WriterUtilities.RenderReference(memberSeeAlso, hri)}");
+        }
+    }
+
     private static async Task WriteFieldsAsync(
         StreamWriter tw,
         DotNetXmlDocument dotNetDocument,
         FieldDefinition field,
         int initialLevel,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 3,
-            $"{Utilities.EscapeSpecialCharacters(Naming.GetName(field))} field"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(field))} field"));
 
         var dotNetXmlFieldName = DotNetXmlNaming.GetDotNetXmlName(field);
         if (dotNetDocument.Members.TryGetValue(
@@ -39,26 +75,16 @@ internal static class Writer
             if (dotNetXmlField.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberSummary, false));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
             }
         }
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
-        await tw.WriteLineAsync($"{Utilities.GetModifier(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
+        await tw.WriteLineAsync($"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
         await tw.WriteLineAsync("```");
 
-        if (dotNetXmlField?.Remarks is { } memberRemarks)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberRemarks, false));
-        }
-
-        if (dotNetXmlField?.Example is { } memberExamples)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberExamples, false));
-        }
+        await WriteRemarksAsync(tw, dotNetXmlField, hri, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -68,14 +94,12 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         PropertyDefinition property,
         int initialLevel,
-        HashSet<MethodReference> excludeMethods,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
-        // TODO: indexer
-
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 3,
-            $"{Utilities.EscapeSpecialCharacters(Naming.GetName(property))} property"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}"));
 
         var dotNetXmlPropertyName = DotNetXmlNaming.GetDotNetXmlName(property);
         if (dotNetDocument.Members.TryGetValue(
@@ -85,38 +109,26 @@ internal static class Writer
             if (dotNetXmlProperty.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberSummary, false));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
             }
         }
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
-        await tw.WriteLineAsync($"{Naming.GetName(property.PropertyType)} {Naming.GetName(property)}");
+        await tw.WriteLineAsync($"{Naming.GetName(property.PropertyType)} {Naming.GetName(property, true)}");
         await tw.WriteLineAsync("{");
-        if (property.GetMethod is { } gm && Utilities.IsVisible(gm))
+        if (CecilUtilities.GetGetter(property) is { } gm)
         {
-            excludeMethods.Add(gm);
-            await tw.WriteLineAsync($"    {Utilities.GetPropertyEventModifier(gm)} get;");
+            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(gm)} get;");
         }
-        if (property.SetMethod is { } sm && Utilities.IsVisible(sm))
+        if (CecilUtilities.GetSetter(property) is { } sm)
         {
-            excludeMethods.Add(sm);
-            await tw.WriteLineAsync($"    {Utilities.GetPropertyEventModifier(sm)} set;");
+            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(sm)} set;");
         }
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
 
-        if (dotNetXmlProperty?.Remarks is { } memberRemarks)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberRemarks, false));
-        }
-
-        if (dotNetXmlProperty?.Example is { } memberExamples)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberExamples, false));
-        }
+        await WriteRemarksAsync(tw, dotNetXmlProperty, hri, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -126,12 +138,12 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         EventDefinition @event,
         int initialLevel,
-        HashSet<MethodReference> excludeMethods,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 3,
-            $"{Utilities.EscapeSpecialCharacters(Naming.GetName(@event))} event"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(@event))} event"));
 
         var dotNetXmlEventName = DotNetXmlNaming.GetDotNetXmlName(@event);
         if (dotNetDocument.Members.TryGetValue(
@@ -141,7 +153,7 @@ internal static class Writer
             if (dotNetXmlEvent.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberSummary, false));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
             }
         }
 
@@ -149,30 +161,18 @@ internal static class Writer
         await tw.WriteLineAsync("```csharp");
         await tw.WriteLineAsync($"event {Naming.GetName(@event.EventType)} {Naming.GetName(@event)}");
         await tw.WriteLineAsync("{");
-        if (@event.AddMethod is { } am && Utilities.IsVisible(am))
+        if (CecilUtilities.GetAdd(@event) is { } am)
         {
-            excludeMethods.Add(am);
-            await tw.WriteLineAsync($"    {Utilities.GetPropertyEventModifier(am)} add;");
+            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(am)} add;");
         }
-        if (@event.RemoveMethod is { } rm && Utilities.IsVisible(rm))
+        if (CecilUtilities.GetRemove(@event) is { } rm)
         {
-            excludeMethods.Add(rm);
-            await tw.WriteLineAsync($"    {Utilities.GetPropertyEventModifier(rm)} remove;");
+            await tw.WriteLineAsync($"    {CecilUtilities.GetPropertyEventModifierKeywordString(rm)} remove;");
         }
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
 
-        if (dotNetXmlEvent?.Remarks is { } memberRemarks)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberRemarks, false));
-        }
-
-        if (dotNetXmlEvent?.Example is { } memberExamples)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberExamples, false));
-        }
+        await WriteRemarksAsync(tw, dotNetXmlEvent, hri, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -182,13 +182,14 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         MethodDefinition method,
         int initialLevel,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
         var title = method.IsConstructor ?
             "Constructor" :
-            $"{Utilities.EscapeSpecialCharacters(Naming.GetName(method))}{(Utilities.IsExtensionMethod(method) ? " extension" : "")} method";
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(method))}(){(CecilUtilities.IsExtensionMethod(method) ? " extension" : "")} method";
 
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 3, title));
 
         var dotNetXmlMethodName = DotNetXmlNaming.GetDotNetXmlName(method);
@@ -200,13 +201,13 @@ internal static class Writer
             if (dotNetXmlMethod.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberSummary, false));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
             }
         }
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
-        await Utilities.WriteSignatureAsync(tw, method);
+        await WriterUtilities.WriteSignatureAsync(tw, method);
         await tw.WriteLineAsync("```");
 
         /////////////////////////////////////////////////////////
@@ -227,11 +228,11 @@ internal static class Writer
                     if (dotNetXmlMethod?.TypeParameters.FirstOrDefault(p => p.Name == gan) is { } dotNetParameter &&
                         dotNetParameter.Description is { } description)
                     {
-                        await tw.WriteLineAsync($"|`{gan}`|{Utilities.RenderDotNetXmlElement(description, true)}|");
+                        await tw.WriteLineAsync($"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                     }
                     else
                     {
-                        await tw.WriteLineAsync($"|`{gan}`| |");
+                        await tw.WriteLineAsync($"| `{gan}` | |");
                     }
                 }
             }
@@ -242,11 +243,11 @@ internal static class Writer
                 if (dotNetXmlMethod?.TypeParameters.FirstOrDefault(p => p.Name == gpn) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync($"|`{gpn}`|{Utilities.RenderDotNetXmlElement(description, true)}|");
+                    await tw.WriteLineAsync($"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
-                    await tw.WriteLineAsync($"|`{gpn}`| |");
+                    await tw.WriteLineAsync($"| `{gpn}` | |");
                 }
             }
         }
@@ -265,25 +266,70 @@ internal static class Writer
                 if (dotNetXmlMethod?.Parameters.FirstOrDefault(p => p.Name == parameter.Name) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync($"|`{parameter.Name}`|{Utilities.RenderDotNetXmlElement(description, true)}|");
+                    await tw.WriteLineAsync($"| `{parameter.Name}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
-                    await tw.WriteLineAsync($"|`{parameter.Name}`| |");
+                    await tw.WriteLineAsync($"| `{parameter.Name}` | |");
                 }
             }
         }
 
-        if (dotNetXmlMethod?.Remarks is { } memberRemarks)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberRemarks, false));
-        }
+        await WriteRemarksAsync(tw, dotNetXmlMethod, hri, ct);
+    }
 
-        if (dotNetXmlMethod?.Example is { } memberExamples)
+    //////////////////////////////////////////////////////////////////////////
+
+    private sealed class VisibleMembers
+    {
+        public readonly FieldDefinition[] Fields;
+        public readonly PropertyDefinition[] Properties;
+        public readonly EventDefinition[] Events;
+        public readonly MethodDefinition[] Methods;
+        public readonly MemberReference[] OverallMembers;
+
+        public VisibleMembers(TypeDefinition type)
         {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(memberExamples, false));
+            var ems = new HashSet<MethodReference>();
+
+            this.Fields = CecilUtilities.GetFields(type);
+
+            this.Properties = CecilUtilities.GetProperties(type);
+            foreach (var property in this.Properties)
+            {
+                if (property.GetMethod is { } gm)
+                {
+                    ems.Add(gm);
+                }
+                if (property.SetMethod is { } sm)
+                {
+                    ems.Add(sm);
+                }
+            }
+
+            this.Events = CecilUtilities.GetEvents(type);
+            foreach (var @event in this.Events)
+            {
+                if (@event.AddMethod is { } am)
+                {
+                    ems.Add(am);
+                }
+                if (@event.RemoveMethod is { } rm)
+                {
+                    ems.Add(rm);
+                }
+            }
+
+            this.Methods = CecilUtilities.GetMethods(type).
+                Where(m => !ems.Contains(m)).
+                ToArray();
+
+            this.OverallMembers = this.Fields.
+                Concat<MemberReference>(this.Properties).
+                Concat(this.Events).
+                Concat(this.Methods).
+                OrderBy(m => Naming.GetName(m, MethodForms.WithBraces)).
+                ToArray();
         }
     }
 
@@ -294,12 +340,13 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         TypeDefinition type,
         int initialLevel,
-        IReadOnlyDictionary<TypeReference, int> membersByType,
+        VisibleMembers visibleMembers,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 2,
-            $"{Utilities.EscapeSpecialCharacters(Naming.GetName(type))} {Utilities.GetTypeString(type)}"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(type))} {CecilUtilities.GetTypeKeywordString(type)}"));
 
         var dotNetXmlTypeName = DotNetXmlNaming.GetDotNetXmlName(type, false);
         DotNetXmlMember? dotNetXmlType = null;
@@ -310,12 +357,12 @@ internal static class Writer
             if (dotNetXmlType.Summary is { } summary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(summary, false));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(summary, false, hri));
             }
         }
 
-        var isDelegateType = Utilities.IsDelegateType(type);
-        var isEnumType = Utilities.IsEnumType(type);
+        var isDelegateType = CecilUtilities.IsDelegateType(type);
+        var isEnumType = CecilUtilities.IsEnumType(type);
 
         if (isDelegateType)
         {
@@ -323,7 +370,7 @@ internal static class Writer
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await Utilities.WriteDelegateSignatureAsync(tw, type);
+            await WriterUtilities.WriteDelegateSignatureAsync(tw, type);
             await tw.WriteLineAsync("```");
         }
         else if (isEnumType)
@@ -332,21 +379,22 @@ internal static class Writer
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await Utilities.WriteEnumValuesAsync(tw, type);
+            await WriterUtilities.WriteEnumValuesAsync(tw, type);
             await tw.WriteLineAsync("```");
         }
         else
         {
             var hasImplementedTypes =
-                (type.BaseType != null && !Utilities.IsObjectType(type.BaseType!)) || type.Interfaces.Count >= 1;
+                (type.BaseType != null && !CecilUtilities.IsObjectType(type.BaseType!)) ||
+                type.Interfaces.Count >= 1;
 
             await tw.WriteLineAsync();
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync($"{Utilities.GetModifier(type)} {Naming.GetName(type)}{(hasImplementedTypes ? " :" : "")}");
+            await tw.WriteLineAsync($"{CecilUtilities.GetModifierKeywordString(type)} {Naming.GetName(type)}{(hasImplementedTypes ? " :" : "")}");
 
-            if (type.BaseType is { } baseType && !Utilities.IsObjectType(baseType))
+            if (type.BaseType is { } baseType && !CecilUtilities.IsObjectType(baseType))
             {
                 if (type.Interfaces.Count >= 1)
                 {
@@ -371,7 +419,7 @@ internal static class Writer
             }
 
             await tw.WriteLineAsync("{");
-            await tw.WriteLineAsync($"    // Total members: {(membersByType.TryGetValue(type, out var count) ? count : 0)}");
+            await tw.WriteLineAsync($"    // Total members: {visibleMembers.OverallMembers.Length}");
             await tw.WriteLineAsync("}");
             await tw.WriteLineAsync("```");
         }
@@ -394,11 +442,13 @@ internal static class Writer
                     if (dotNetXmlType?.TypeParameters.FirstOrDefault(p => p.Name == gan) is { } dotNetParameter &&
                         dotNetParameter.Description is { } description)
                     {
-                        await tw.WriteLineAsync($"|`{gan}`|{Utilities.RenderDotNetXmlElement(description, true)}|");
+                        await tw.WriteLineAsync(
+                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                     }
                     else
                     {
-                        await tw.WriteLineAsync($"|`{gan}`| |");
+                        await tw.WriteLineAsync(
+                            $"| `{gan}` | |");
                     }
                 }
             }
@@ -409,66 +459,107 @@ internal static class Writer
                 if (dotNetXmlType?.TypeParameters.FirstOrDefault(p => p.Name == gpn) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync($"|`{gpn}`|{Utilities.RenderDotNetXmlElement(description, true)}|");
+                    await tw.WriteLineAsync(
+                        $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
-                    await tw.WriteLineAsync($"|`{gpn}`| |");
+                    await tw.WriteLineAsync(
+                        $"| `{gpn}` | |");
                 }
             }
         }
 
-        if (dotNetXmlType?.Remarks is { } remarks)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(remarks, false));
-        }
-
-        if (dotNetXmlType?.Example is { } examples)
-        {
-            await tw.WriteLineAsync();
-            await tw.WriteLineAsync(Utilities.RenderDotNetXmlElement(examples, false));
-        }
+        await WriteRemarksAsync(tw, dotNetXmlType, hri, ct);
 
         if (!isDelegateType && !isEnumType)
         {
             /////////////////////////////////////////////////////////
-            // Fields.
+            // Member index table.
 
-            foreach (var field in Utilities.GetFields(type))
+            if (visibleMembers.OverallMembers.Length >= 1)
             {
                 await tw.WriteLineAsync();
-                await WriteFieldsAsync(tw, dotNetDocument, field, initialLevel, ct);
+                await tw.WriteLineAsync("|Member type|Members|");
+                await tw.WriteLineAsync("|:----|:----|");
+
+                if (visibleMembers.Fields.Length >= 1)
+                {
+                    var memberList = string.Join(", ", visibleMembers.Fields.
+                        Select(f =>
+                            hri.TryGetValue(FullNaming.GetFullName(f), out var id) ?
+                            $"[ `{Naming.GetName(f)}` ](#{id})" :
+                            $"`{Naming.GetName(f)}`"));
+                    await tw.WriteLineAsync($"|Field| {memberList} |");
+                }
+
+                if (visibleMembers.Properties.Length >= 1)
+                {
+                    var memberList = string.Join(", ", visibleMembers.Properties.
+                        Select(p =>
+                            hri.TryGetValue(FullNaming.GetFullName(p), out var id) ?
+                            $"[ `{Naming.GetName(p)}` ](#{id})" :
+                            $"`{Naming.GetName(p)}`"));
+                    await tw.WriteLineAsync($"|Property| {memberList} |");
+                }
+
+                if (visibleMembers.Events.Length >= 1)
+                {
+                    var memberList = string.Join(", ", visibleMembers.Properties.
+                        Select(e =>
+                            hri.TryGetValue(FullNaming.GetFullName(e), out var id) ?
+                            $"[ `{Naming.GetName(e)}` ](#{id})" :
+                            $"`{Naming.GetName(e)}`"));
+                    await tw.WriteLineAsync($"|Event| {memberList} |");
+                }
+
+                if (visibleMembers.Methods.Length >= 1)
+                {
+                    var memberList = string.Join(", ", visibleMembers.Methods.
+                        // Because all overload methods are same name.
+                        DistinctBy(m => Naming.GetName(m)).
+                        Select(m =>
+                            hri.TryGetValue(FullNaming.GetFullName(m), out var id) ?
+                            $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ](#{id})" :
+                            $"`{Naming.GetName(m, MethodForms.WithBraces)}`"));
+                    await tw.WriteLineAsync($"|Method| {memberList} |");
+                }
+            }
+
+            /////////////////////////////////////////////////////////
+            // Fields.
+
+            foreach (var field in visibleMembers.Fields)
+            {
+                await tw.WriteLineAsync();
+                await WriteFieldsAsync(tw, dotNetDocument, field, initialLevel, hri, ct);
             }
 
             /////////////////////////////////////////////////////////
             // Properties.
 
-            var excludeMethods = new HashSet<MethodReference>();
-
-            foreach (var property in Utilities.GetProperties(type))
+            foreach (var property in visibleMembers.Properties)
             {
                 await tw.WriteLineAsync();
-                await WritePropertyAsync(tw, dotNetDocument, property, initialLevel, excludeMethods, ct);
+                await WritePropertyAsync(tw, dotNetDocument, property, initialLevel, hri, ct);
             }
 
             /////////////////////////////////////////////////////////
             // Events.
 
-            foreach (var @event in Utilities.GetEvents(type))
+            foreach (var @event in visibleMembers.Events)
             {
                 await tw.WriteLineAsync();
-                await WriteEventAsync(tw, dotNetDocument, @event, initialLevel, excludeMethods, ct);
+                await WriteEventAsync(tw, dotNetDocument, @event, initialLevel, hri, ct);
             }
 
             /////////////////////////////////////////////////////////
             // Methods.
 
-            foreach (var method in Utilities.GetMethods(type).
-                Where(m => !excludeMethods.Contains(m)))
+            foreach (var method in visibleMembers.Methods)
             {
                 await tw.WriteLineAsync();
-                await WriteMethodAsync(tw, dotNetDocument, method, initialLevel, ct);
+                await WriteMethodAsync(tw, dotNetDocument, method, initialLevel, hri, ct);
             }
         }
     }
@@ -481,16 +572,17 @@ internal static class Writer
         AssemblyDefinition assembly,
         string @namespace,
         int initialLevel,
+        IReadOnlyDictionary<string, string> hri,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(Utilities.GetSectionString(
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 1,
-            $"{Utilities.EscapeSpecialCharacters(@namespace)} namespace"));
+            $"{WriterUtilities.EscapeSpecialCharacters(@namespace)} namespace"));
 
         /////////////////////////////////////////////////////////
         // Type index table.
 
-        var types = Utilities.GetTypes(assembly.MainModule).
+        var types = CecilUtilities.GetTypes(assembly.MainModule).
             Where(t => t.Namespace == @namespace).
             ToArray();
 
@@ -498,59 +590,28 @@ internal static class Writer
         await tw.WriteLineAsync("|Type|Members|");
         await tw.WriteLineAsync("|:----|:----|");
 
-        var membersByType = new Dictionary<TypeReference, int>();
+        var membersByType = new Dictionary<TypeReference, VisibleMembers>();
         foreach (var type in types)
         {
-            var ems = new HashSet<MethodReference>();
+            var visibleMembers = new VisibleMembers(type);
 
-            var fields = Utilities.GetFields(type);
+            var members = visibleMembers.OverallMembers;
 
-            var properties = Utilities.GetProperties(type);
-            foreach (var property in properties)
-            {
-                if (property.GetMethod is { } gm)
-                {
-                    ems.Add(gm);
-                }
-                if (property.SetMethod is { } sm)
-                {
-                    ems.Add(sm);
-                }
-            }
-
-            var events = Utilities.GetEvents(type);
-            foreach (var @event in events)
-            {
-                if (@event.AddMethod is { } am)
-                {
-                    ems.Add(am);
-                }
-                if (@event.RemoveMethod is { } rm)
-                {
-                    ems.Add(rm);
-                }
-            }
-
-            var methods = Utilities.GetMethods(type).
-                Where(m => !ems.Contains(m)).
-                ToArray();
-
-            var members = fields.
-                Concat<MemberReference>(properties).
-                Concat(events).
-                Concat(methods).
-                OrderBy(m => Naming.GetName(m, true)).
-                ToArray();
-
-            var memberList = string.Join(",", members.
-                Select(m => $"`{Naming.GetName(m, true)}`").
-                Distinct());  // Because all overload methods are same signature, with only "()" argument bracket.
+            var memberList = string.Join(", ", members.
+                // Because all overload methods are same name.
+                DistinctBy(m => Naming.GetName(m)).
+                Select(m => hri.TryGetValue(FullNaming.GetFullName(m), out var id) ? 
+                    $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ](#{id})" :
+                    $"`{Naming.GetName(m, MethodForms.WithBraces)}`"));
             if (memberList.Length >= 1)
             {
-                await tw.WriteLineAsync($"|`{Naming.GetName(type)}`|{memberList}|");
+                await tw.WriteLineAsync(
+                    hri.TryGetValue(FullNaming.GetFullName(type), out var id) ?
+                        $"| [ `{Naming.GetName(type)}` ](#{id}) | {memberList} |" :
+                        $"| `{Naming.GetName(type)}` | {memberList} |");
             }
 
-            membersByType[type] = members.Length;
+            membersByType[type] = visibleMembers;
         }
 
         /////////////////////////////////////////////////////////
@@ -559,7 +620,8 @@ internal static class Writer
         foreach (var type in types)
         {
             await tw.WriteLineAsync();
-            await WriteTypeAsync(tw, dotNetDocument, type, initialLevel, membersByType, ct);
+            await WriteTypeAsync(
+                tw, dotNetDocument, type, initialLevel, membersByType[type], hri, ct);
         }
     }
 
@@ -585,15 +647,39 @@ internal static class Writer
         // An assembly.
 
         await tw.WriteLineAsync(
-            Utilities.GetSectionString(
+            WriterUtilities.GetSectionString(
                 initialLevel,
-                $"{Utilities.EscapeSpecialCharacters(dotNetDocument.AssemblyName)} assembly"));
+                $"{WriterUtilities.EscapeSpecialCharacters(dotNetDocument.AssemblyName)} assembly"));
+
+        /////////////////////////////////////////////////////////
+        // Assembly metadata.
+
+        await tw.WriteLineAsync();
+        await tw.WriteLineAsync("|Metadata|Value|");
+        await tw.WriteLineAsync("|:----|:----|");
+        await tw.WriteLineAsync(
+            $"| `AssemblyVersion` | {WriterUtilities.GetPrettyPrintValue(assembly.Name.Version.ToString())} |");
+
+        foreach (var ca in assembly.CustomAttributes.
+            Where(ca => ca.ConstructorArguments.Count >= 1 && validAttributes.Contains(ca.AttributeType.FullName)))
+        {
+            var cas = string.Join(", ",
+                ca.ConstructorArguments.Select(ca => WriterUtilities.GetPrettyPrintValue(ca.Value)));
+            await tw.WriteLineAsync(
+                $"| `{Naming.GetName(ca.AttributeType).Replace("Attribute", "")}` | {cas} |");
+        }
+
+        /////////////////////////////////////////////////////////
+        // Retrieve hash reference identities.
+
+        var hri = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
 
         /////////////////////////////////////////////////////////
         // Examine namespaces.
 
+        var allTypes = CecilUtilities.GetTypes(assembly.MainModule);
         var namespaces =
-            Utilities.GetTypes(assembly.MainModule).
+            allTypes.
             Select(t => t.Namespace).
             Distinct().
             OrderBy(ns => ns).
@@ -608,12 +694,18 @@ internal static class Writer
 
         foreach (var @namespace in namespaces)
         {
-            var types = string.Join(",",
-                Utilities.GetTypes(assembly.MainModule).
+            var types = string.Join(", ",
+                allTypes.
                 Where(t => t.Namespace == @namespace).
-                Select(t => $"`{Naming.GetName(t)}`").
-                OrderBy(t => t));
-            await tw.WriteLineAsync($"|`{@namespace}`|{types}|");
+                OrderBy(t => Naming.GetName(t)).
+                Select(t => hri.TryGetValue(FullNaming.GetFullName(t), out var id) ?
+                    $"[ `{Naming.GetName(t)}` ](#{id})" :
+                    $"`{Naming.GetName(t)}`"));
+
+            await tw.WriteLineAsync(
+                hri.TryGetValue(@namespace, out var id) ?
+                    $"| [ `{@namespace}` ](#{id}) | {types} |" :
+                    $"| `{@namespace}` | {types} |");
         }
 
         /////////////////////////////////////////////////////////
@@ -622,7 +714,8 @@ internal static class Writer
         foreach (var @namespace in namespaces)
         {
             await tw.WriteLineAsync();
-            await WriteNamespaceAsync(tw, dotNetDocument, assembly, @namespace, initialLevel, ct);
+            await WriteNamespaceAsync(
+                tw, dotNetDocument, assembly, @namespace, initialLevel, hri, ct);
         }
 
         await tw.FlushAsync();

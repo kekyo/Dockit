@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 using Mono.Cecil;
+using System;
 using System.Linq;
 
 namespace Dockit.Internal;
@@ -43,7 +44,7 @@ internal static class FullNaming
         {
             return $"{(gp.IsCovariant ? "out" : gp.IsContravariant ? "in" : "")}{gp.Name}";
         }
-        else if (Utilities.csharpKeywords.TryGetValue(type.FullName, out var name))
+        else if (Naming.CSharpKeywords.TryGetValue(type.FullName, out var name))
         {
             return name;
         }
@@ -62,28 +63,40 @@ internal static class FullNaming
 
         if (type.DeclaringType is { } declaringType)
         {
-            return $"{type.Namespace}.{GetFullName(declaringType)}.{Utilities.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{type.Namespace}.{GetFullName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
         else
         {
-            return $"{type.Namespace}.{Utilities.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{type.Namespace}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
     }
 
     public static string GetFullName(FieldReference field) =>
-        $"{GetFullName(field.DeclaringType)}.{field.Name}";
+        $"{GetFullName(field.DeclaringType)}.{Naming.GetName(field)}";
 
-    public static string GetFullName(PropertyReference property) =>
-        $"{GetFullName(property.DeclaringType)}.{property.Name}";
+    private static string GetPropertySignature(PropertyDefinition property)
+    {
+        var parameters = CecilUtilities.GetIndexerParameters(property);
+        return string.Join(",", parameters.
+            Select(p => $"{GetFullName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {Naming.GetName(p)}"));
+    }
+
+    public static string GetFullName(PropertyReference property)
+    {
+        var indexerParameters = GetPropertySignature(property.Resolve());
+        return indexerParameters.Length >= 1 ?
+            $"{GetFullName(property.DeclaringType)}.this[{indexerParameters}]" :
+            $"{GetFullName(property.DeclaringType)}.{Naming.GetName(property)}";
+    }
 
     public static string GetFullName(EventReference @event) =>
-        $"{GetFullName(@event.DeclaringType)}.{@event.Name}";
+        $"{GetFullName(@event.DeclaringType)}.{Naming.GetName(@event)}";
 
     private static string GetMethodSignature(MethodReference method) =>
         string.Join(",", method.Parameters.
-            Select(p => $"{Utilities.GetExtensionMethodPreSignature(method, p.Index)}{GetFullName(p.ParameterType, Utilities.GetParameterModifier(p))} {Naming.GetName(p)}"));
+            Select(p => $"{CecilUtilities.GetMethodParameterPreSignature(method, p.Index)}{GetFullName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {Naming.GetName(p)}"));
 
-    public static string GetFullSignatureName(MethodReference method)
+    public static string GetFullSignaturedName(MethodReference method)
     {
         if (method.Resolve().IsConstructor)
         {
@@ -102,6 +115,26 @@ internal static class FullNaming
                 method.GenericParameters.Select(gp => GetFullName(gp)))}>";
         }
 
-        return $"{GetFullName(method.ReturnType)} {GetFullName(method.DeclaringType)}.{Naming.GetName(method)}{genericTypeParameters}({GetMethodSignature(method)})";
+        if (Naming.OperatorFormats.TryGetValue(method.Name, out var of))
+        {
+            return of.IsRequiredPostFix ?
+                $"{of.Name} {GetFullName(method.ReturnType)}{genericTypeParameters}({GetMethodSignature(method)})" :
+                $"{GetFullName(method.ReturnType)} {GetFullName(method.DeclaringType)}.{of.Name}{genericTypeParameters}({GetMethodSignature(method)})";
+        }
+        else
+        {
+            return $"{GetFullName(method.ReturnType)} {GetFullName(method.DeclaringType)}.{Naming.GetName(method)}{genericTypeParameters}({GetMethodSignature(method)})";
+        }
     }
+
+    public static string GetFullName(MemberReference member) =>
+        member switch
+        {
+            TypeReference t => GetFullName(t),
+            FieldReference f => GetFullName(f),
+            PropertyReference p => GetFullName(p),
+            EventReference e => GetFullName(e),
+            MethodReference m => GetFullSignaturedName(m),
+            _ => throw new ArgumentException()
+        };
 }

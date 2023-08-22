@@ -35,6 +35,7 @@ internal sealed class DotNetXmlParameter
 
 internal enum DotNetXmlMemberTypes
 {
+    Namespace,
     Type,
     Field,
     Property,
@@ -52,6 +53,7 @@ internal sealed class DotNetXmlMember
     public readonly XElement? Returns;
     public readonly XElement? Remarks;
     public readonly XElement? Example;
+    public readonly XElement? SeeAlso;
 
     public DotNetXmlMember(
         DotNetXmlMemberTypes type,
@@ -61,7 +63,8 @@ internal sealed class DotNetXmlMember
         DotNetXmlParameter[] parameters,
         XElement? returns,
         XElement? remarks,
-        XElement? example)
+        XElement? example,
+        XElement? seeAlso)
     {
         this.Type = type;
         this.Name = name;
@@ -71,6 +74,7 @@ internal sealed class DotNetXmlMember
         this.Returns = returns;
         this.Remarks = remarks;
         this.Example = example;
+        this.SeeAlso = seeAlso;
     }
 
     public override string ToString() =>
@@ -154,6 +158,7 @@ internal sealed class DotNetXmlDocument
 
                 var type = memberName.Substring(0, 2) switch
                 {
+                    "N:" => DotNetXmlMemberTypes.Namespace,
                     "T:" => DotNetXmlMemberTypes.Type,
                     "F:" => DotNetXmlMemberTypes.Field,
                     "M:" => DotNetXmlMemberTypes.Method,
@@ -190,13 +195,16 @@ internal sealed class DotNetXmlDocument
                             return new DotNetXmlParameter(name, paramElement);
                         }).
                         ToArray();
-                    var returns = entry.memberElement.Element("returns");
+                    var returns =
+                        entry.memberElement.Element("returns") ??
+                        entry.memberElement.Element("value");
                     var remarks = entry.memberElement.Element("remarks");
                     var example = entry.memberElement.Element("example");
+                    var seealso = entry.memberElement.Element("seealso");
 
                     return new DotNetXmlMember(
                         entry.key.Type, entry.key.Name,
-                        summary, typeParameters, parameters, returns, remarks, example);
+                        summary, typeParameters, parameters, returns, remarks, example, seealso);
                 });
 
         return new DotNetXmlDocument(assemblyName, members);

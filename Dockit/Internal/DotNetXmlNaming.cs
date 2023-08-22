@@ -12,10 +12,10 @@ using System.Linq;
 
 namespace Dockit.Internal;
 
+// https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/?redirectedfrom=MSDN#id-strings
+
 internal static class DotNetXmlNaming
 {
-    // https://learn.microsoft.com/en-us/dotnet/csharp/language-reference/xmldoc/?redirectedfrom=MSDN#id-strings
-
     public static string GetDotNetXmlName(
         TypeReference type, bool parameterDeclaration = false)
     {
@@ -72,11 +72,11 @@ internal static class DotNetXmlNaming
 
         if (type.DeclaringType is { } declaringType)
         {
-            return $"{type.Namespace}.{GetDotNetXmlName(declaringType)}.{Utilities.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{type.Namespace}.{GetDotNetXmlName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
         else
         {
-            return $"{type.Namespace}.{Utilities.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{type.Namespace}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
     }
 
@@ -105,6 +105,6 @@ internal static class DotNetXmlNaming
             genericParameterCount = $"``{method.GenericParameters.Count}";
         }
 
-        return $"{GetDotNetXmlName(method.DeclaringType, false)}.{Utilities.TrimGenericArguments(method.Name)}{genericParameterCount}({GetDotNetXmlMethodSignature(method)})";
+        return $"{GetDotNetXmlName(method.DeclaringType, false)}.{Naming.TrimGenericArguments(method.Name)}{genericParameterCount}({GetDotNetXmlMethodSignature(method)})";
     }
 }
