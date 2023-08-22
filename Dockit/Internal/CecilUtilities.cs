@@ -38,19 +38,9 @@ internal static class CecilUtilities
         return true;
     }
 
-    public static TypeDefinition[] GetTypes(ModuleDefinition module) =>
-        module.Types.
-        Where(t =>
-            (t.IsPublic || t.IsNestedPublic || t.IsNestedFamily || t.IsNestedFamilyOrAssembly) &&
-            IsVisibleByEditorBrowsable(t)).
-        OrderBy(t => Naming.GetName(t)).
-        ToArray();
-
-    public static FieldDefinition[] GetFields(TypeDefinition type) =>
-        type.Fields.
-        Where(IsVisible).
-        OrderBy(Naming.GetName).
-        ToArray();
+    public static bool IsVisible(TypeDefinition type) =>
+        (type.IsPublic || type.IsNestedPublic || type.IsNestedFamily || type.IsNestedFamilyOrAssembly) &&
+        IsVisibleByEditorBrowsable(type);
 
     public static bool IsVisible(FieldDefinition field) =>
         (field.IsPublic || field.IsFamily || field.IsFamilyOrAssembly) &&
@@ -63,6 +53,18 @@ internal static class CecilUtilities
     public static bool IsVisible(MethodDefinition method) =>
         (method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly) &&
         IsVisibleByEditorBrowsable(method);
+
+    public static TypeDefinition[] GetTypes(ModuleDefinition module) =>
+        module.Types.
+        Where(IsVisible).
+        OrderBy(t => Naming.GetName(t)).
+        ToArray();
+
+    public static FieldDefinition[] GetFields(TypeDefinition type) =>
+        type.Fields.
+        Where(IsVisible).
+        OrderBy(Naming.GetName).
+        ToArray();
 
     public static bool IsExtensionMethod(MethodReference method) =>
         !method.HasThis && method.HasParameters &&
@@ -94,7 +96,7 @@ internal static class CecilUtilities
     {
         var gm = GetGetter(property);
         var sm = GetSetter(property);
-        return gm?.Parameters.Count >= 1 || sm?.Parameters.Count >= 1;
+        return gm?.Parameters.Count >= 1 || sm?.Parameters.Count >= 2;
     }
 
     public static ParameterDefinition[] GetIndexerParameters(PropertyDefinition property)
@@ -350,9 +352,26 @@ internal static class CecilUtilities
         {
             sb.Append(" static");
         }
-        if (method.IsFinal)
+
+        if (method.IsAbstract)
         {
-            sb.Append(" sealed");
+            sb.Append(" abstract");
+        }
+        else if (method.IsVirtual)
+        {
+            if (method.IsReuseSlot)
+            {
+                sb.Append(" override");
+
+                if (method.IsFinal)
+                {
+                    sb.Append(" sealed");
+                }
+            }
+            else
+            {
+                sb.Append(" virtual");
+            }
         }
 
         return sb.ToString();

@@ -30,7 +30,7 @@ internal static class WriterUtilities
     {
         if (method.Parameters.Count == 0)
         {
-            await tw.WriteLineAsync(")");
+            await tw.WriteLineAsync(");");
         }
         else
         {
@@ -45,7 +45,7 @@ internal static class WriterUtilities
                     p.ParameterType, CecilUtilities.GetParameterModifier(p));
                 var parameterName = Naming.GetName(p);
                 var defaultValue = p.HasConstant ?
-                    $" = {(p.Constant?.ToString() ?? "null")}" : "";
+                    $" = {GetPrettyPrintValue(p.Constant)}" : "";
 
                 if (index < method.Parameters.Count - 1)
                 {
@@ -328,7 +328,8 @@ internal static class WriterUtilities
         }
     }
 
-    public static string RenderReference(XElement element,
+    public static string RenderReference(
+        XElement element,
         IReadOnlyDictionary<string, string> hri)
     {
         var cref = element.Attribute("cref")?.Value?.Trim();

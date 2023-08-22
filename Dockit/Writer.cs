@@ -276,13 +276,31 @@ internal static class Writer
                     dotNetParameter.Description is { } description)
                 {
                     await tw.WriteLineAsync(
-                        $"| `{parameter.Name}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                        $"| `{Naming.GetName(parameter)}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
                 }
                 else
                 {
                     await tw.WriteLineAsync(
-                        $"| `{parameter.Name}` | |");
+                        $"| `{Naming.GetName(parameter)}` | |");
                 }
+            }
+        }
+
+        if (method.ReturnType.FullName != "System.Void")
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync("|Return|Description|");
+            await tw.WriteLineAsync("|:----|:----|");
+
+            if (dotNetXmlMethod?.Returns is { } returns)
+            {
+                await tw.WriteLineAsync(
+                    $"| `(retval)` | {WriterUtilities.RenderDotNetXmlElement(returns, true, hri)} |");
+            }
+            else
+            {
+                await tw.WriteLineAsync(
+                    $"| `(retval)` | |");
             }
         }
 
