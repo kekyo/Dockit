@@ -67,6 +67,8 @@ internal static class Writer
             initialLevel + 3,
             $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(field))} field"));
 
+        await WriterUtilities.WriteObsoleteDetailAsync(tw, field, ct);
+
         var dotNetXmlFieldName = DotNetXmlNaming.GetDotNetXmlName(field);
         if (dotNetDocument.Members.TryGetValue(
             new(DotNetXmlMemberTypes.Field, dotNetXmlFieldName),
@@ -81,6 +83,7 @@ internal static class Writer
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
+        await WriterUtilities.WriteCustomAttributesAsync(tw, field, 0, ct);
         await tw.WriteLineAsync(
             $"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
         await tw.WriteLineAsync("```");
@@ -102,6 +105,8 @@ internal static class Writer
             initialLevel + 3,
             $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}"));
 
+        await WriterUtilities.WriteObsoleteDetailAsync(tw, property, ct);
+
         var dotNetXmlPropertyName = DotNetXmlNaming.GetDotNetXmlName(property);
         if (dotNetDocument.Members.TryGetValue(
             new(DotNetXmlMemberTypes.Property, dotNetXmlPropertyName),
@@ -116,15 +121,18 @@ internal static class Writer
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
+        await WriterUtilities.WriteCustomAttributesAsync(tw, property, 0, ct);
         await tw.WriteLineAsync($"{Naming.GetName(property.PropertyType)} {Naming.GetName(property, true)}");
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetGetter(property) is { } gm)
         {
+            await WriterUtilities.WriteCustomAttributesAsync(tw, gm, 4, ct);
             await tw.WriteLineAsync(
                 $"    {CecilUtilities.GetPropertyEventModifierKeywordString(gm)} get;");
         }
         if (CecilUtilities.GetSetter(property) is { } sm)
         {
+            await WriterUtilities.WriteCustomAttributesAsync(tw, sm, 4, ct);
             await tw.WriteLineAsync(
                 $"    {CecilUtilities.GetPropertyEventModifierKeywordString(sm)} set;");
         }
@@ -148,6 +156,8 @@ internal static class Writer
             initialLevel + 3,
             $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(@event))} event"));
 
+        await WriterUtilities.WriteObsoleteDetailAsync(tw, @event, ct);
+
         var dotNetXmlEventName = DotNetXmlNaming.GetDotNetXmlName(@event);
         if (dotNetDocument.Members.TryGetValue(
             new(DotNetXmlMemberTypes.Event, dotNetXmlEventName),
@@ -162,15 +172,18 @@ internal static class Writer
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
+        await WriterUtilities.WriteCustomAttributesAsync(tw, @event, 0, ct);
         await tw.WriteLineAsync($"event {Naming.GetName(@event.EventType)} {Naming.GetName(@event)}");
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetAdd(@event) is { } am)
         {
+            await WriterUtilities.WriteCustomAttributesAsync(tw, am, 4, ct);
             await tw.WriteLineAsync(
                 $"    {CecilUtilities.GetPropertyEventModifierKeywordString(am)} add;");
         }
         if (CecilUtilities.GetRemove(@event) is { } rm)
         {
+            await WriterUtilities.WriteCustomAttributesAsync(tw, rm, 4, ct);
             await tw.WriteLineAsync(
                 $"    {CecilUtilities.GetPropertyEventModifierKeywordString(rm)} remove;");
         }
@@ -197,6 +210,8 @@ internal static class Writer
         await tw.WriteLineAsync(WriterUtilities.GetSectionString(
             initialLevel + 3, title));
 
+        await WriterUtilities.WriteObsoleteDetailAsync(tw, method, ct);
+
         var dotNetXmlMethodName = DotNetXmlNaming.GetDotNetXmlName(method);
         DotNetXmlMember? dotNetXmlMethod = null;
         if (dotNetDocument.Members.TryGetValue(
@@ -212,7 +227,7 @@ internal static class Writer
 
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
-        await WriterUtilities.WriteSignatureAsync(tw, method);
+        await WriterUtilities.WriteSignatureAsync(tw, method, ct);
         await tw.WriteLineAsync("```");
 
         /////////////////////////////////////////////////////////
@@ -289,18 +304,18 @@ internal static class Writer
         if (method.ReturnType.FullName != "System.Void")
         {
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync("|Return|Description|");
-            await tw.WriteLineAsync("|:----|:----|");
+            await tw.WriteLineAsync("|Return value|");
+            await tw.WriteLineAsync("|:----|");
 
             if (dotNetXmlMethod?.Returns is { } returns)
             {
                 await tw.WriteLineAsync(
-                    $"| `(retval)` | {WriterUtilities.RenderDotNetXmlElement(returns, true, hri)} |");
+                    $"| {WriterUtilities.RenderDotNetXmlElement(returns, true, hri)} |");
             }
             else
             {
                 await tw.WriteLineAsync(
-                    $"| `(retval)` | |");
+                    $"| |");
             }
         }
 
@@ -377,6 +392,8 @@ internal static class Writer
             initialLevel + 2,
             $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(type))} {CecilUtilities.GetTypeKeywordString(type)}"));
 
+        await WriterUtilities.WriteObsoleteDetailAsync(tw, type, ct);
+
         var dotNetXmlTypeName = DotNetXmlNaming.GetDotNetXmlName(type, false);
         DotNetXmlMember? dotNetXmlType = null;
         if (dotNetDocument.Members.TryGetValue(
@@ -399,7 +416,7 @@ internal static class Writer
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await WriterUtilities.WriteDelegateSignatureAsync(tw, type);
+            await WriterUtilities.WriteDelegateSignatureAsync(tw, type, ct);
             await tw.WriteLineAsync("```");
         }
         else if (isEnumType)
@@ -408,7 +425,7 @@ internal static class Writer
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
-            await WriterUtilities.WriteEnumValuesAsync(tw, type);
+            await WriterUtilities.WriteEnumValuesAsync(tw, type, ct);
             await tw.WriteLineAsync("```");
 
             /////////////////////////////////////////////////////////
@@ -451,6 +468,7 @@ internal static class Writer
             await tw.WriteLineAsync("```csharp");
             await tw.WriteLineAsync($"namespace {type.Namespace};");
             await tw.WriteLineAsync();
+            await WriterUtilities.WriteCustomAttributesAsync(tw, type, 0, ct);
             await tw.WriteLineAsync(
                 $"{CecilUtilities.GetModifierKeywordString(type)} {Naming.GetName(type)}{(hasImplementedTypes ? " :" : "")}");
 
@@ -721,13 +739,13 @@ internal static class Writer
         await tw.WriteLineAsync("|Metadata|Value|");
         await tw.WriteLineAsync("|:----|:----|");
         await tw.WriteLineAsync(
-            $"| `AssemblyVersion` | {WriterUtilities.GetPrettyPrintValue(assembly.Name.Version.ToString())} |");
+            $"| `AssemblyVersion` | {WriterUtilities.EscapeSpecialCharacters(WriterUtilities.GetPrettyPrintValue(assembly.Name.Version.ToString(), assembly.MainModule.TypeSystem.String))} |");
 
         foreach (var ca in assembly.CustomAttributes.
             Where(ca => ca.ConstructorArguments.Count >= 1 && validAttributes.Contains(ca.AttributeType.FullName)))
         {
-            var cas = string.Join(", ",
-                ca.ConstructorArguments.Select(ca => WriterUtilities.GetPrettyPrintValue(ca.Value)));
+            var cas = string.Join(", ", ca.ConstructorArguments.
+                Select(ca => WriterUtilities.EscapeSpecialCharacters(WriterUtilities.GetPrettyPrintValue(ca.Value, ca.Type))));
             await tw.WriteLineAsync(
                 $"| `{Naming.GetName(ca.AttributeType).Replace("Attribute", "")}` | {cas} |");
         }

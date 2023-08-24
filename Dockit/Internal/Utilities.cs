@@ -29,6 +29,20 @@ internal static class Utilities
         Array.Empty<T>();
 #endif
 
+    public static IEnumerable<U> Collect<T, U>(
+        this IEnumerable<T> enumerable,
+        Func<T, U?> selector)
+        where U : class
+    {
+        foreach (var item in enumerable)
+        {
+            if (selector(item) is { } value)
+            {
+                yield return value;
+            }
+        }
+    }
+
     public static IEnumerable<T> LastSkipWhile<T>(
         this IEnumerable<T> enumerable,
         Func<T, bool> predicate)

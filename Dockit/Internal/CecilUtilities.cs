@@ -8,6 +8,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 using Mono.Cecil;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
 using System.Text;
@@ -50,9 +52,24 @@ internal static class CecilUtilities
         (GetGetter(property) is { } || GetSetter(property) is { }) &&
         IsVisibleByEditorBrowsable(property);
 
+    public static bool IsVisible(EventDefinition @event) =>
+        (GetAdd(@event) is { } || GetRemove(@event) is { }) &&
+        IsVisibleByEditorBrowsable(@event);
+
     public static bool IsVisible(MethodDefinition method) =>
         (method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly) &&
         IsVisibleByEditorBrowsable(method);
+
+    public static bool IsVisible(MemberReference member) =>
+        member.Resolve() switch
+        {
+            TypeDefinition t => IsVisible(t),
+            FieldDefinition f => IsVisible(f),
+            PropertyDefinition p => IsVisible(p),
+            EventDefinition e => IsVisible(e),
+            MethodDefinition m => IsVisible(m),
+            { } m => throw new InvalidOperationException(),
+        };
 
     public static TypeDefinition[] GetTypes(ModuleDefinition module) =>
         module.Types.
@@ -65,6 +82,12 @@ internal static class CecilUtilities
         Where(IsVisible).
         OrderBy(Naming.GetName).
         ToArray();
+
+    public static string? GetObsoleteDescription(ICustomAttributeProvider member) =>
+        member.CustomAttributes.Where(ca =>
+            ca.AttributeType.FullName == "System.ObsoleteAttribute").
+            Select(ca => ca.ConstructorArguments[0].Value?.ToString() ?? "").
+            FirstOrDefault();
 
     public static bool IsExtensionMethod(MethodReference method) =>
         !method.HasThis && method.HasParameters &&
@@ -224,9 +247,14 @@ internal static class CecilUtilities
             {
                 sb.Append(" abstract");
             }
-            else if (type.IsSealed)
+            else if (type.IsSealed && !type.IsValueType)
             {
                 sb.Append(" sealed");
+            }
+            else if (type.IsValueType &&
+                type.CustomAttributes.Any(ca => ca.AttributeType.FullName == "System.Runtime.CompilerServices.IsReadOnlyAttribute"))
+            {
+                sb.Append(" readonly");
             }
         }
 

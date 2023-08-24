@@ -15,6 +15,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -25,8 +26,87 @@ internal static class WriterUtilities
     public static string GetSectionString(int level, string text) =>
         $"{new string('#', level)} {text}";
 
+    public static async Task WriteObsoleteDetailAsync(
+        TextWriter tw, ICustomAttributeProvider member, CancellationToken ct)
+    {
+        if (CecilUtilities.GetObsoleteDescription(member) is { } od)
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync("|Obsoleted detail|");
+            await tw.WriteLineAsync("|:----|");
+            await tw.WriteLineAsync($"| {EscapeSpecialCharacters(od)} |");
+        }
+    }
+
+    private static string[] GetCustomAttributeDeclarations(
+        ICustomAttributeProvider member) =>
+        member.CustomAttributes.Collect(ca =>
+        {
+            // Could not refer this member.
+            if (member is MemberReference mr &&
+                !CecilUtilities.IsVisible(mr))
+            {
+                return null;
+            }
+
+            switch (FullNaming.GetFullName(ca.AttributeType))
+            {
+                // Hides these attributes.
+                case "System.ParamArrayAttribute":
+                case "System.Runtime.CompilerServices.ExtensionAttribute":
+                case "System.Runtime.CompilerServices.IsReadOnlyAttribute":
+                case "System.Runtime.CompilerServices.AsyncStateMachineAttribute":
+                case "System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute":
+                case "System.Runtime.CompilerServices.NullableAttribute":
+                case "System.Runtime.CompilerServices.NullableContextAttribute":
+                case "System.Runtime.CompilerServices.InterpolatedStringHandlerArgumentAttribute":
+                case "System.Runtime.CompilerServices.EnumeratorCancellationAttribute":
+                    return null;
+
+                // Fixed declaration.
+                case "System.ObsoleteAttribute":
+                    return "[Obsolete]";   // Obsolete details are shown in a separated table.
+            }
+
+            // Trimmed attribute naming.
+            var name = Naming.GetName(ca.AttributeType);
+            if (name.EndsWith("Attribute"))
+            {
+                name = name.Substring(0, name.Length - "Attribute".Length);
+            }
+
+            static string GetPrettyPrintValue(CustomAttributeArgument caa) =>
+                caa.Value switch
+                {
+                    // Unfolds params array
+                    CustomAttributeArgument[] children =>
+                        string.Join(",", children.Select(GetPrettyPrintValue)),
+                    _ => WriterUtilities.GetPrettyPrintValue(caa.Value, caa.Type),
+                };
+
+            var arguments = string.Join(", ", ca.ConstructorArguments.
+                Select(GetPrettyPrintValue).
+                Concat(ca.Fields.Concat(ca.Properties).
+                Select(cana => $"{cana.Name}={GetPrettyPrintValue(cana.Argument)}")).
+                ToArray());
+
+            return $"[{name}{(arguments.Length >= 1 ? $"({arguments})" : "")}]";
+        }).
+        ToArray();
+
+    public static async Task WriteCustomAttributesAsync(
+        TextWriter tw, ICustomAttributeProvider member, int indent, CancellationToken ct)
+    {
+        var indentString = new string(' ', indent);
+        foreach (var declaration in
+            GetCustomAttributeDeclarations(member))
+        {
+            await tw.WriteLineAsync(indentString + declaration);
+        }
+    }
+
     private static async Task WriteSignatureBodyAsync(
-        TextWriter tw, MethodReference method)
+        TextWriter tw, MethodReference method, CancellationToken ct)
     {
         if (method.Parameters.Count == 0)
         {
@@ -35,17 +115,20 @@ internal static class WriterUtilities
         else
         {
             await tw.WriteLineAsync();
+
             for (var index = 0; index < method.Parameters.Count; index++)
             {
-                var p = method.Parameters[index];
+                var parameter = method.Parameters[index];
 
-                var preSignature = CecilUtilities.IsParamArray(p) ? "params " :
-                    CecilUtilities.GetMethodParameterPreSignature(method, p.Index);
+                var preSignature = CecilUtilities.IsParamArray(parameter) ? "params " :
+                    CecilUtilities.GetMethodParameterPreSignature(method, parameter.Index);
                 var typeName = Naming.GetName(
-                    p.ParameterType, CecilUtilities.GetParameterModifier(p));
-                var parameterName = Naming.GetName(p);
-                var defaultValue = p.HasConstant ?
-                    $" = {GetPrettyPrintValue(p.Constant)}" : "";
+                    parameter.ParameterType, CecilUtilities.GetParameterModifier(parameter));
+                var parameterName = Naming.GetName(parameter);
+                var defaultValue = parameter.HasConstant ?
+                    $" = {GetPrettyPrintValue(parameter.Constant, parameter.ParameterType)}" : "";
+
+                await WriteCustomAttributesAsync(tw, parameter, 4, ct);
 
                 if (index < method.Parameters.Count - 1)
                 {
@@ -62,34 +145,40 @@ internal static class WriterUtilities
     }
 
     public static async Task WriteSignatureAsync(
-        TextWriter tw, MethodReference method)
+        TextWriter tw, MethodReference method, CancellationToken ct)
     {
-        if (method.Resolve().IsConstructor)
+        var m = method.Resolve();
+        await WriteCustomAttributesAsync(tw, m, 0, ct);
+
+        if (m.IsConstructor)
         {
             await tw.WriteAsync(
-                $"{CecilUtilities.GetModifierKeywordString(method.Resolve())} {Naming.GetName(method.DeclaringType)}(");
+                $"{CecilUtilities.GetModifierKeywordString(m)} {Naming.GetName(m.DeclaringType)}(");
         }
         else
         {
             await tw.WriteAsync(
-                $"{CecilUtilities.GetModifierKeywordString(method.Resolve())} {Naming.GetName(method, MethodForms.WithPreBrace | MethodForms.WithReturnType)}");
+                $"{CecilUtilities.GetModifierKeywordString(m)} {Naming.GetName(m, MethodForms.WithPreBrace | MethodForms.WithReturnType)}");
         }
-        await WriteSignatureBodyAsync(tw, method);
+
+        await WriteSignatureBodyAsync(tw, m, ct);
     }
 
     public static async Task WriteDelegateSignatureAsync(
-        TextWriter tw, TypeDefinition delegateType)
+        TextWriter tw, TypeDefinition delegateType, CancellationToken ct)
     {
         var m = delegateType.Methods.First(m => m.Name.StartsWith("Invoke"));
 
+        await WriteCustomAttributesAsync(tw, delegateType, 0, ct);
         await tw.WriteAsync(
             $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {Naming.GetName(m.ReturnType)} {Naming.GetName(delegateType)}(");
-        await WriteSignatureBodyAsync(tw, m);
+        await WriteSignatureBodyAsync(tw, m, ct);
     }
 
     public static async Task WriteEnumValuesAsync(
-        TextWriter tw, TypeDefinition enumType)
+        TextWriter tw, TypeDefinition enumType, CancellationToken ct)
     {
+        await WriteCustomAttributesAsync(tw, enumType, 0, ct);
         await tw.WriteLineAsync(
             $"{CecilUtilities.GetModifierKeywordString(enumType, false)} {Naming.GetName(enumType)} : {Naming.GetName(enumType.GetEnumUnderlyingType())}");
         await tw.WriteLineAsync(
@@ -105,13 +194,15 @@ internal static class WriterUtilities
             var field = fields[index];
             if (index < fields.Length - 1)
             {
+                await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant)},");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)},");
             }
             else
             {
+                await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant)}");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)}");
             }
         }
 
@@ -119,9 +210,11 @@ internal static class WriterUtilities
             "}");
     }
 
-    public static string GetPrettyPrintValue(object? value) =>
-        EscapeSpecialCharacters(value switch
+    public static string GetPrettyPrintValue(
+        object? value, TypeReference type) =>
+        value switch
         {
+            // TODO: Enum types
             null => "null",
             bool b => b ? "true" : "false",
             long l => $"{l}L",
@@ -132,12 +225,10 @@ internal static class WriterUtilities
             decimal m => $"{m}m",
             string str => $"\"{str}\"",
             char ch => $"'{ch}'",
-            Enum e => $"{e.GetType().Name}.{e}",
             TypeReference t => $"typeof({Naming.GetName(t)})",
-            Type t => $"typeof({t.Name})",
             IFormattable f => f.ToString(null, CultureInfo.InvariantCulture) ?? value.GetType().Name,
             _ => value.ToString() ?? value.GetType().Name,
-        });
+        };
 
     public static string EscapeSpecialCharacters(string str)
     {
