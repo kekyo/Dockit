@@ -12,4 +12,8 @@
     <PackageReference Include="Mono.Options" Version="6.12.0.148" />
   </ItemGroup>
 
+  <ItemGroup Condition="('$(TargetFramework)' == 'net45') OR ('$(TargetFramework)' == 'net461') OR ('$(TargetFramework)' == 'net48')">
+    <PackageReference Include="ILRepack.FullAuto" Version="1.2.0" PrivateAssets="All" />
+  </ItemGroup>
+
 </Project>
