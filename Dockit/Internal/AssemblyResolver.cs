@@ -10,10 +10,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-
 using Mono.Cecil;
 
-namespace Dockit;
+namespace Dockit.Internal;
 
 // Imported from ILCompose project.
 // https://github.com/kekyo/ILCompose
@@ -25,12 +24,12 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
 
     public AssemblyResolver(string[] referenceBasePaths)
     {
-        this.symbolReaderProvider = new SymbolReaderProvider();
+        symbolReaderProvider = new SymbolReaderProvider();
 
         foreach (var referenceBasePath in referenceBasePaths)
         {
             var fullPath = Path.GetFullPath(referenceBasePath);
-            base.AddSearchDirectory(fullPath);
+            AddSearchDirectory(fullPath);
             Debug.WriteLine($"Reference base path: {fullPath}");
         }
     }
@@ -42,10 +41,10 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
             ReadWrite = false,
             InMemory = true,
             AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
+            SymbolReaderProvider = symbolReaderProvider,
             ReadSymbols = true,
         };
-        var ad = base.Resolve(name, parameters);
+        var ad = Resolve(name, parameters);
         if (loaded.Add(ad.MainModule.FileName))
         {
             Debug.WriteLine($"Assembly loaded: {ad.MainModule.FileName}");
@@ -60,7 +59,7 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
             ReadWrite = false,
             InMemory = true,
             AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
+            SymbolReaderProvider = symbolReaderProvider,
             ReadSymbols = true,
         };
         var ad = AssemblyDefinition.ReadAssembly(assemblyPath, parameters);
@@ -78,7 +77,7 @@ internal sealed class AssemblyResolver : DefaultAssemblyResolver
             ReadWrite = false,
             InMemory = true,
             AssemblyResolver = this,
-            SymbolReaderProvider = this.symbolReaderProvider,
+            SymbolReaderProvider = symbolReaderProvider,
             ReadSymbols = true,
         };
         var md = ModuleDefinition.ReadModule(modulePath, parameters);
