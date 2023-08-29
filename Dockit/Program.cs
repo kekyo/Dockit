@@ -18,6 +18,7 @@ public static class Program
     public static async Task<int> Main(string[] args)
     {
         var assemblyPath = args[0];
+        var markdownBasePath = args[1];
         var initialLevel = 1;
 
         var referenceBasePath = Path.GetDirectoryName(assemblyPath)!;
@@ -26,7 +27,7 @@ public static class Program
             Path.GetDirectoryName(assemblyPath)!,
             Path.GetFileNameWithoutExtension(assemblyPath) + ".xml");
         var markdownPath = Path.Combine(
-            Path.GetDirectoryName(assemblyPath)!,
+            markdownBasePath,
             Path.GetFileNameWithoutExtension(assemblyPath) + ".md");
 
         /////////////////////////////////////////////////////////
