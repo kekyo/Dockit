@@ -33,7 +33,48 @@ Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.co
 
 ## Usage
 
-TODO:
+Dockit accepts two arguments:
+
+```bash
+dockit <assembly-path> <output-directory>
+```
+
+Before you run it, make sure that:
+
+- The target assembly has already been built.
+- XML documentation output is enabled for that project.
+- The XML documentation file is placed next to the assembly with the same base name, such as `MyLibrary.dll` and `MyLibrary.xml`.
+- Referenced assemblies are also available in the assembly directory so metadata can be resolved.
+
+For SDK-style projects, the minimum setup is:
+
+```xml
+<PropertyGroup>
+  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+</PropertyGroup>
+```
+
+Generate Markdown from a library build output:
+
+```bash
+dockit ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
+```
+
+This writes `./docs/api/MyLibrary.md`.
+
+Generate documentation after a normal build:
+
+```bash
+dotnet build -c Release
+dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
+```
+
+Generate Markdown first, then convert it with Pandoc:
+
+```bash
+dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
+pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
+```
 
 ----
 
