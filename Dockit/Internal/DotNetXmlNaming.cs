@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 using Mono.Cecil;
+using System;
 using System.Linq;
 
 namespace Dockit.Internal;
@@ -16,19 +17,35 @@ namespace Dockit.Internal;
 
 internal static class DotNetXmlNaming
 {
+    private static GenericParameter[] GetDeclaredGenericParameters(TypeReference type)
+    {
+        var inheritedCount = type.DeclaringType?.GenericParameters.Count ?? 0;
+        var declaredCount = Math.Max(0, type.GenericParameters.Count - inheritedCount);
+        return type.GenericParameters.
+            Skip(Math.Max(0, type.GenericParameters.Count - declaredCount)).
+            ToArray();
+    }
+
+    private static TypeReference[] GetDeclaredGenericArguments(GenericInstanceType git)
+    {
+        var declaredCount = GetDeclaredGenericParameters(git.ElementType).Length;
+        return git.GenericArguments.
+            Skip(Math.Max(0, git.GenericArguments.Count - declaredCount)).
+            ToArray();
+    }
+
     public static string GetDotNetXmlName(
         TypeReference type, bool parameterDeclaration = false)
     {
         if (type is ByReferenceType byrefType)
         {
-            return $"{GetDotNetXmlName(byrefType.ElementType)}@";
+            return $"{GetDotNetXmlName(byrefType.ElementType, parameterDeclaration)}@";
         }
         else if (type is ArrayType arrayType)
         {
-            if (arrayType.Dimensions.Count >= 2)
+            if (!arrayType.IsVector)
             {
-                // TODO: bounds
-                return $"{GetDotNetXmlName(arrayType.ElementType, parameterDeclaration)}[{string.Join(",", arrayType.Dimensions.Select(d => ""))}]";
+                return $"{GetDotNetXmlName(arrayType.ElementType, parameterDeclaration)}[{string.Join(",", arrayType.Dimensions.Select(_ => "0:"))}]";
             }
             else
             {
@@ -47,44 +64,67 @@ internal static class DotNetXmlNaming
         var genericTypeParameters = "";
         if (type is GenericInstanceType git)
         {
+            var declaredArguments = GetDeclaredGenericArguments(git);
             if (parameterDeclaration)
             {
-                genericTypeParameters = $"{{{string.Join(",",
-                    git.GenericArguments.Select(gat => GetDotNetXmlName(gat, parameterDeclaration)))}}}";
+                if (declaredArguments.Length >= 1)
+                {
+                    genericTypeParameters = $"{{{string.Join(",",
+                        declaredArguments.Select(gat => GetDotNetXmlName(gat, parameterDeclaration)))}}}";
+                }
             }
             else
             {
-                genericTypeParameters = $"`{git.GenericArguments.Count}";
+                if (declaredArguments.Length >= 1)
+                {
+                    genericTypeParameters = $"`{declaredArguments.Length}";
+                }
             }
         }
-        else if (type.HasGenericParameters)
+        else
         {
+            var declaredParameters = GetDeclaredGenericParameters(type);
             if (parameterDeclaration)
             {
-                genericTypeParameters = $"{{{string.Join(",",
-                    type.GenericParameters.Select(gp => GetDotNetXmlName(gp, parameterDeclaration)))}}}";
+                if (declaredParameters.Length >= 1)
+                {
+                    genericTypeParameters = $"{{{string.Join(",",
+                        declaredParameters.Select(gp => GetDotNetXmlName(gp, parameterDeclaration)))}}}";
+                }
             }
             else
             {
-                genericTypeParameters = $"`{type.GenericParameters.Count}";
+                if (declaredParameters.Length >= 1)
+                {
+                    genericTypeParameters = $"`{declaredParameters.Length}";
+                }
             }
         }
 
         if (type.DeclaringType is { } declaringType)
         {
-            return $"{type.Namespace}.{GetDotNetXmlName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{GetDotNetXmlName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
         else
         {
-            return $"{type.Namespace}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            var prefix = string.IsNullOrWhiteSpace(type.Namespace) ? string.Empty : $"{type.Namespace}.";
+            return $"{prefix}{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
     }
 
     public static string GetDotNetXmlName(FieldReference field) =>
         $"{GetDotNetXmlName(field.DeclaringType, false)}.{field.Name}";
 
-    public static string GetDotNetXmlName(PropertyReference property) =>
-        $"{GetDotNetXmlName(property.DeclaringType, false)}.{property.Name}";
+    public static string GetDotNetXmlName(PropertyReference property)
+    {
+        var signature = string.Join(",",
+            CecilUtilities.GetIndexerParameters(property.Resolve()).
+                Select(p => GetDotNetXmlName(p.ParameterType, true)));
+
+        return signature.Length >= 1 ?
+            $"{GetDotNetXmlName(property.DeclaringType, false)}.{property.Name}({signature})" :
+            $"{GetDotNetXmlName(property.DeclaringType, false)}.{property.Name}";
+    }
 
     public static string GetDotNetXmlName(EventReference @event) =>
         $"{GetDotNetXmlName(@event.DeclaringType, false)}.{@event.Name}";
@@ -105,6 +145,19 @@ internal static class DotNetXmlNaming
             genericParameterCount = $"``{method.GenericParameters.Count}";
         }
 
-        return $"{GetDotNetXmlName(method.DeclaringType, false)}.{Naming.TrimGenericArguments(method.Name)}{genericParameterCount}({GetDotNetXmlMethodSignature(method)})";
+        var methodName = method.Name switch
+        {
+            ".ctor" => "#ctor",
+            ".cctor" => "#cctor",
+            _ => Naming.TrimGenericArguments(method.Name),
+        };
+        var signature = GetDotNetXmlMethodSignature(method);
+        var signaturePart = signature.Length >= 1 ? $"({signature})" : string.Empty;
+        var returnTypeSuffix =
+            method.Name == "op_Implicit" || method.Name == "op_Explicit" ?
+            $"~{GetDotNetXmlName(method.ReturnType, true)}" :
+            string.Empty;
+
+        return $"{GetDotNetXmlName(method.DeclaringType, false)}.{methodName}{genericParameterCount}{signaturePart}{returnTypeSuffix}";
     }
 }

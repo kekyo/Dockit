@@ -61,7 +61,7 @@ public sealed class WriterUtilitiesTests
         {
             Assert.That(identities, Contains.Key(FullNaming.GetFullName(genericType)));
             Assert.That(identities, Contains.Key(DotNetXmlNaming.GetDotNetXmlName(genericType)));
-            Assert.That(overloadIdentities.Distinct(), Has.Count.EqualTo(2));
+            Assert.That(overloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
         });
     }
 }

@@ -45,7 +45,11 @@ public sealed class DotNetXmlNamingTests
         var rewriteMapMethod = genericType.Methods.Single(method => method.Name == "RewriteMap");
         var handleMatrixMethod = genericType.Methods.Single(method => method.Name == "HandleMatrix");
         var usePointerMethod = genericType.Methods.Single(method => method.Name == "UsePointer");
+        var implicitOperatorMethod = genericType.Methods.Single(method => method.Name == "op_Implicit");
+        var onChangedMethod = genericType.Methods.Single(method => method.Name == "OnChanged");
         var extensionMethod = extensionType.Methods.Single(method => method.Name == "Extend");
+        var echoMethod = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Secondary", "SecondaryType").
+            Methods.Single(method => method.Name == "Echo");
 
         Assert.Multiple(() =>
         {
@@ -74,8 +78,17 @@ public sealed class DotNetXmlNamingTests
                 DotNetXmlNaming.GetDotNetXmlName(usePointerMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Uses a pointer.")));
             Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(implicitOperatorMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Converts a sample to a string.")));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(onChangedMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Raises the changed event.")));
+            Assert.That(
                 DotNetXmlNaming.GetDotNetXmlName(extensionMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Extends a sample.")));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(echoMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Returns text.")));
         });
     }
 }

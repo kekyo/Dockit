@@ -583,7 +583,7 @@ internal static class Writer
 
                 if (visibleMembers.Events.Length >= 1)
                 {
-                    var memberList = string.Join(", ", visibleMembers.Properties.
+                    var memberList = string.Join(", ", visibleMembers.Events.
                         Select(e =>
                             hri.TryGetValue(FullNaming.GetFullName(e), out var id) ?
                             $"[ `{Naming.GetName(e)}` ](#{id})" :

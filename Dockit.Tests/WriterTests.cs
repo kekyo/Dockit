@@ -33,7 +33,7 @@ public sealed class WriterTests
 
         Assert.Multiple(() =>
         {
-            Assert.That(markdown, Does.Contain("### GenericSample<TItem,TValue> class"));
+            Assert.That(markdown, Does.Contain("### GenericSample&lt;TItem,TValue&gt; class"));
             Assert.That(markdown, Does.Contain("Represents a generic sample type."));
             Assert.That(markdown, Does.Contain("| `TItem` | Primary item type. |"));
             Assert.That(markdown, Does.Contain("| `TValue` | Secondary value type. |"));
@@ -43,16 +43,18 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("#### Constructor"));
             Assert.That(markdown, Does.Contain("Initializes a new instance."));
 
-            Assert.That(markdown, Does.Contain("#### this[int index] indexer"));
+            Assert.That(markdown, Does.Contain("#### this[int] indexer"));
             Assert.That(markdown, Does.Contain("Gets or sets an indexed item."));
 
-            Assert.That(markdown, Does.Contain("#### Transform() method"));
+            Assert.That(markdown, Does.Contain("#### Transform&lt;TResult&gt;() method"));
             Assert.That(markdown, Does.Contain("| `TResult` | Result type. |"));
             Assert.That(markdown, Does.Contain("| `item` | Item parameter. |"));
             Assert.That(markdown, Does.Contain("| `values` | Values parameter. |"));
             Assert.That(markdown, Does.Contain("| Transformation result. |"));
 
-            Assert.That(markdown, Does.Contain("#### Extend() extension method"));
+            Assert.That(markdown, Does.Contain("Converts a sample to a string."));
+            Assert.That(markdown, Does.Contain("Raises the changed event."));
+            Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));
         });
     }
@@ -69,7 +71,11 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("### SampleState enum"));
             Assert.That(markdown, Does.Contain("|Enum value|Description|"));
             Assert.That(markdown, Does.Contain("| `Started` | Started state. Used while processing is active. |"));
-            Assert.That(markdown, Does.Contain("### Transformer<TInput,TOutput> delegate"));
+            Assert.That(markdown, Does.Contain("### Transformer&lt;TInput,TOutput&gt; delegate"));
+            Assert.That(markdown, Does.Contain("| `TInput` | Delegate input type. |"));
+            Assert.That(markdown, Does.Contain("| `TOutput` | Delegate output type. |"));
+            Assert.That(markdown, Does.Contain("Returns text."));
+            Assert.That(markdown, Does.Contain("| Static text. |"));
         });
     }
 
