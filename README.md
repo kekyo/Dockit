@@ -33,11 +33,16 @@ Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.co
 
 ## Usage
 
-Dockit accepts two arguments:
+Dockit accepts two positional arguments and optional flags:
 
 ```bash
-dockit <assembly-path> <output-directory>
+dockit [options] <assembly-path> <output-directory>
 ```
+
+Available options:
+
+- `-h`, `--help`: Show usage help.
+- `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
 
 Before you run it, make sure that:
 
