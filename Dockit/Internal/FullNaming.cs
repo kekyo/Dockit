@@ -18,6 +18,23 @@ namespace Dockit.Internal;
 
 internal static class FullNaming
 {
+    private static GenericParameter[] GetDeclaredGenericParameters(TypeReference type)
+    {
+        var inheritedCount = type.DeclaringType?.GenericParameters.Count ?? 0;
+        var declaredCount = Math.Max(0, type.GenericParameters.Count - inheritedCount);
+        return type.GenericParameters.
+            Skip(Math.Max(0, type.GenericParameters.Count - declaredCount)).
+            ToArray();
+    }
+
+    private static TypeReference[] GetDeclaredGenericArguments(GenericInstanceType git)
+    {
+        var declaredCount = GetDeclaredGenericParameters(git.ElementType).Length;
+        return git.GenericArguments.
+            Skip(Math.Max(0, git.GenericArguments.Count - declaredCount)).
+            ToArray();
+    }
+
     public static string GetFullName(
         TypeReference type,
         ParameterModifierCandidates pm = ParameterModifierCandidates.Ref)
@@ -34,7 +51,9 @@ internal static class FullNaming
         }
         else if (type is ArrayType arrayType)
         {
-            return $"{GetFullName(arrayType.ElementType)}[]";
+            return arrayType.IsVector ?
+                $"{GetFullName(arrayType.ElementType)}[]" :
+                $"{GetFullName(arrayType.ElementType)}[{new string(',', Math.Max(0, arrayType.Rank - 1))}]";
         }
         else if (type is PointerType pointerType)
         {
@@ -42,7 +61,7 @@ internal static class FullNaming
         }
         else if (type is GenericParameter gp)
         {
-            return $"{(gp.IsCovariant ? "out" : gp.IsContravariant ? "in" : "")}{gp.Name}";
+            return gp.Name;
         }
         else if (Naming.CSharpKeywords.TryGetValue(type.FullName, out var name))
         {
@@ -52,22 +71,31 @@ internal static class FullNaming
         var genericTypeParameters = "";
         if (type is GenericInstanceType git)
         {
-            genericTypeParameters = $"<{string.Join(",",
-                git.GenericArguments.Select(gat => GetFullName(gat)))}>";
+            var declaredArguments = GetDeclaredGenericArguments(git);
+            if (declaredArguments.Length >= 1)
+            {
+                genericTypeParameters = $"<{string.Join(",",
+                    declaredArguments.Select(gat => GetFullName(gat)))}>";
+            }
         }
-        else if (type.HasGenericParameters)
+        else
         {
-            genericTypeParameters = $"<{string.Join(",",
-                type.GenericParameters.Select(gp => GetFullName(gp)))}>";
+            var declaredParameters = GetDeclaredGenericParameters(type);
+            if (declaredParameters.Length >= 1)
+            {
+                genericTypeParameters = $"<{string.Join(",",
+                    declaredParameters.Select(gp => GetFullName(gp)))}>";
+            }
         }
 
         if (type.DeclaringType is { } declaringType)
         {
-            return $"{type.Namespace}.{GetFullName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            return $"{GetFullName(declaringType)}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
         else
         {
-            return $"{type.Namespace}.{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
+            var prefix = string.IsNullOrWhiteSpace(type.Namespace) ? string.Empty : $"{type.Namespace}.";
+            return $"{prefix}{Naming.TrimGenericArguments(type.Name)}{genericTypeParameters}";
         }
     }
 

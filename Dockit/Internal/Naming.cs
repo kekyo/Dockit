@@ -47,6 +47,23 @@ internal readonly struct OperatorFormat
 
 internal static class Naming
 {
+    private static GenericParameter[] GetDeclaredGenericParameters(TypeReference type)
+    {
+        var inheritedCount = type.DeclaringType?.GenericParameters.Count ?? 0;
+        var declaredCount = Math.Max(0, type.GenericParameters.Count - inheritedCount);
+        return type.GenericParameters.
+            Skip(Math.Max(0, type.GenericParameters.Count - declaredCount)).
+            ToArray();
+    }
+
+    private static TypeReference[] GetDeclaredGenericArguments(GenericInstanceType git)
+    {
+        var declaredCount = GetDeclaredGenericParameters(git.ElementType).Length;
+        return git.GenericArguments.
+            Skip(Math.Max(0, git.GenericArguments.Count - declaredCount)).
+            ToArray();
+    }
+
     public static readonly IReadOnlyDictionary<string, string> CSharpKeywords =
         new Dictionary<string, string>()
         {
@@ -110,7 +127,9 @@ internal static class Naming
         }
         else if (type is ArrayType arrayType)
         {
-            return $"{GetName(arrayType.ElementType)}[]";
+            return arrayType.IsVector ?
+                $"{GetName(arrayType.ElementType)}[]" :
+                $"{GetName(arrayType.ElementType)}[{new string(',', Math.Max(0, arrayType.Rank - 1))}]";
         }
         else if (type is PointerType pointerType)
         {
@@ -118,7 +137,7 @@ internal static class Naming
         }
         else if (type is GenericParameter gp)
         {
-            return $"{(gp.IsCovariant ? "out" : gp.IsContravariant ? "in" : "")}{gp.Name}";
+            return gp.Name;
         }
         else if (CSharpKeywords.TryGetValue(type.FullName, out var name))
         {
@@ -128,13 +147,21 @@ internal static class Naming
         var genericTypeParameters = "";
         if (type is GenericInstanceType git)
         {
-            genericTypeParameters = $"<{string.Join(",",
-                git.GenericArguments.Select(gat => GetName(gat)))}>";
+            var declaredArguments = GetDeclaredGenericArguments(git);
+            if (declaredArguments.Length >= 1)
+            {
+                genericTypeParameters = $"<{string.Join(",",
+                    declaredArguments.Select(gat => GetName(gat)))}>";
+            }
         }
-        else if (type.HasGenericParameters)
+        else
         {
-            genericTypeParameters = $"<{string.Join(",",
-                type.GenericParameters.Select(gp => GetName(gp)))}>";
+            var declaredParameters = GetDeclaredGenericParameters(type);
+            if (declaredParameters.Length >= 1)
+            {
+                genericTypeParameters = $"<{string.Join(",",
+                    declaredParameters.Select(gp => GetName(gp)))}>";
+            }
         }
 
         if (type.DeclaringType is { } declaringType)

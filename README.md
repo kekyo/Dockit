@@ -2,8 +2,11 @@
 
 ![Dockit](Images/Dockit.100.png)
 
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
-[![NuGet Dockit](https://img.shields.io/nuget/v/Dockit.svg?style=flat)](https://www.nuget.org/packages/Dockit)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+
+|Package|Link|
+|:----|:----|
+|dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
 
 ----
 
@@ -18,7 +21,60 @@ This allows you to target a variety of output formats.
 It is also much simpler to manage than other solutions,
 as you simply install NuGet and it automatically generates the documentation for you.
 
-TODO:
+## Install
+
+Install .NET tooling via NuGet:
+
+```bash
+dotnet tool install -g dockit-cli
+```
+
+Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.com/kekyo/Dockit/releases).
+
+## Usage
+
+Dockit accepts two arguments:
+
+```bash
+dockit <assembly-path> <output-directory>
+```
+
+Before you run it, make sure that:
+
+- The target assembly has already been built.
+- XML documentation output is enabled for that project.
+- The XML documentation file is placed next to the assembly with the same base name, such as `MyLibrary.dll` and `MyLibrary.xml`.
+- Referenced assemblies are also available in the assembly directory so metadata can be resolved.
+
+For SDK-style projects, the minimum setup is:
+
+```xml
+<PropertyGroup>
+  <GenerateDocumentationFile>true</GenerateDocumentationFile>
+</PropertyGroup>
+```
+
+Generate Markdown from a library build output:
+
+```bash
+dockit ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
+```
+
+This writes `./docs/api/MyLibrary.md`.
+
+Generate documentation after a normal build:
+
+```bash
+dotnet build -c Release
+dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
+```
+
+Generate Markdown first, then convert it with Pandoc:
+
+```bash
+dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
+pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
+```
 
 ----
 
