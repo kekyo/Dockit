@@ -2,8 +2,11 @@
 
 ![Dockit](Images/Dockit.100.png)
 
-[![Project Status: WIP – Initial development is in progress, but there has not yet been a stable, usable release suitable for the public.](https://www.repostatus.org/badges/latest/wip.svg)](https://www.repostatus.org/#wip)
-[![NuGet Dockit](https://img.shields.io/nuget/v/Dockit.svg?style=flat)](https://www.nuget.org/packages/Dockit)
+[![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
+
+|Package|Link|
+|:----|:----|
+|dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
 
 ----
 
@@ -17,6 +20,18 @@ This allows you to target a variety of output formats.
 
 It is also much simpler to manage than other solutions,
 as you simply install NuGet and it automatically generates the documentation for you.
+
+## Install
+
+Install .NET tooling via NuGet:
+
+```bash
+dotnet tool install -g dockit-cli
+```
+
+Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.com/kekyo/Dockit/releases).
+
+## Usage
 
 TODO:
 
