@@ -20,5 +20,5 @@ mkdir -p artifacts
 dotnet restore
 dotnet build -p:Configuration=Release -p:Platform="Any CPU" Dockit.sln
 zip artifacts/dockit-${VERSION}.zip README.md LICENSE Images/Dockit.100.png
-(cd Dockit/bin/Release; zip ../../../artifacts/dockit-${VERSION}.zip */*)
+(cd dotnet/Dockit/bin/Release; zip ../../../../artifacts/dockit-${VERSION}.zip */*)
 dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -o artifacts Dockit.sln

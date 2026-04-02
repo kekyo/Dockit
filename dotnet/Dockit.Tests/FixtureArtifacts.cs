@@ -91,7 +91,7 @@ internal static class FixtureArtifacts
 
     private static string FindProjectOutput(string fileName)
     {
-        var projectDirectory = Path.Combine(RepositoryRoot, "Dockit.TestAssembly");
+        var projectDirectory = Path.Combine(RepositoryRoot, "dotnet", "Dockit.TestAssembly");
         var path = Directory.EnumerateFiles(projectDirectory, fileName, SearchOption.AllDirectories).
             Where(path =>
                 path.Contains($"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}", StringComparison.Ordinal) &&

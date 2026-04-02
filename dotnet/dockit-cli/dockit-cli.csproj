@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="../Images/Dockit.100.png" Pack="true" PackagePath="" />
+    <None Include="../../Images/Dockit.100.png" Pack="true" PackagePath="" />
   </ItemGroup>
 
   <ItemGroup>
