@@ -11,6 +11,11 @@
 
 ----
 
+[(For Japanese language/日本語はこちら)](./README_ja.md)
+
+> Please note that this English version of the document was machine-translated and then partially edited, so it may contain inaccuracies.
+> We welcome pull requests to correct any errors in the text.
+
 ## What is this?
 
 Dockit is an automatic Markdown documentation generator.
@@ -183,6 +188,6 @@ You just submit the reference document output by Dockit to your important (and n
 
 ## License
 
-Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
+Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)
 
 License under Apache-v2.

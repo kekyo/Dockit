@@ -7,15 +7,17 @@
     "dockit-ts": "./dist/cli.mjs"
   },
   "files": [
-    "dist"
+    "dist",
+    "LICENSE"
   ],
+  "readme": "README_pack.md",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "build": "vite build",
-    "test": "vitest run",
-    "check": "npm run build && npm run test"
+    "test": "npm run build && vitest run",
+    "pack": "npm run build && screw-up pack --pack-destination ../../artifacts/"
   },
   "dependencies": {
     "typescript": "<6.0.0"
