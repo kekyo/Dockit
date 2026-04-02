@@ -1,0 +1,16 @@
+{
+  "name": "dockit-dist-entry-fixture",
+  "version": "0.3.0",
+  "description": "Fixture package with dist-only metadata entry points.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "dockit-ts-fixture",
+  "version": "1.2.3",
+  "description": "Fixture package for dockit-ts.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./extras": "./src/extras.ts"
+  }
+}

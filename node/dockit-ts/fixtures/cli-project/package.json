@@ -1,0 +1,8 @@
+{
+  "name": "dockit-cli-fixture",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "dockit-cli-fixture": "./dist/cli.mjs"
+  }
+}

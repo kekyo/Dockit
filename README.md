@@ -7,12 +7,22 @@
 |Package|Link|
 |:----|:----|
 |dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
+|dockit-ts (NPM CLI)|[![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)|
 
 ----
 
+[(For Japanese language/日本語はこちら)](./README_ja.md)
+
+> Please note that this English version of the document was machine-translated and then partially edited, so it may contain inaccuracies.
+> We welcome pull requests to correct any errors in the text.
+
 ## What is this?
 
-Dockit is an automatic Markdown documentation generator, fetch from .NET XML comment/metadata.
+Dockit is an automatic Markdown documentation generator.
+This repository contains:
+
+- a `.NET` generator for assemblies and XML documentation metadata
+- a TypeScript generator for npm projects using the TypeScript compiler API
 
 The advantage of Dockit is that it generates the document once in Markdown format
 and then uses Pandoc to generate the document from Markdown.
@@ -21,9 +31,13 @@ This allows you to target a variety of output formats.
 It is also much simpler to manage than other solutions,
 as you simply install NuGet and it automatically generates the documentation for you.
 
+----
+
 ## Install
 
-Install .NET tooling via NuGet:
+### .NET
+
+Install the `.NET` tooling via NuGet:
 
 ```bash
 dotnet tool install -g dockit-cli
@@ -31,18 +45,31 @@ dotnet tool install -g dockit-cli
 
 Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.com/kekyo/Dockit/releases).
 
-## Usage
+### TypeScript / JavaScript
 
-Dockit accepts two positional arguments and optional flags:
+Install the `NPM` package via npmjs:
 
 ```bash
-dockit [options] <assembly-path> <output-directory>
+npm install -g dockit-cli
+```
+
+----
+
+## Usage
+
+### .NET
+
+The `.NET` generator accepts two positional arguments and optional flags:
+
+```bash
+dockit-dotnet [options] <assembly-path> <output-directory>
 ```
 
 Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+- `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
 
 Before you run it, make sure that:
 
@@ -62,7 +89,7 @@ For SDK-style projects, the minimum setup is:
 Generate Markdown from a library build output:
 
 ```bash
-dockit ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
+dockit-dotnet ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
 ```
 
 This writes `./docs/api/MyLibrary.md`.
@@ -71,14 +98,68 @@ Generate documentation after a normal build:
 
 ```bash
 dotnet build -c Release
-dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
+dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
 ```
 
 Generate Markdown first, then convert it with Pandoc:
 
 ```bash
-dockit ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
+dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
 pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
+```
+
+### TypeScript / JavaScript
+
+The TypeScript generator accepts a package root path and an output directory:
+
+```bash
+dockit-ts [options] <project-path> <output-directory>
+```
+
+Available options:
+
+- `-h`, `--help`: Show usage help.
+- `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+
+Before you run it, make sure that:
+
+- The target directory contains `package.json`.
+- The project is a TypeScript or JavaScript npm package.
+- Exported declarations are reachable from the package entry points.
+- A `tsconfig.json` or `jsconfig.json` is available when the project needs custom compiler settings.
+
+When `package.json` does not expose source entry points directly, Dockit tries these strategies in order:
+
+1. Explicit `--entry` values.
+2. `package.json` `dockit.entryPoints`.
+3. `package.json` `exports`, `types`, `typings`, `module`, `main`.
+4. Conventional fallback files such as `./src/index.ts` and `./src/main.ts`.
+
+For CLI-oriented packages, you can set custom entry points in `package.json`:
+
+```json
+{
+  "dockit": {
+    "entryPoints": {
+      ".": "./src/index.ts",
+      "./extra": "./src/extra.ts"
+    }
+  }
+}
+```
+
+Generate Markdown from an npm package:
+
+```bash
+node ./node/dockit-ts/dist/cli.mjs ./path/to/package ./docs/api
+```
+
+This writes `./docs/api/<package-name>.md`.
+
+Generate Markdown from a CLI-style package that keeps source files under `src`:
+
+```bash
+node ./node/dockit-ts/dist/cli.mjs --entry ./src/index.ts ./path/to/package ./docs/api
 ```
 
 ----
@@ -107,6 +188,6 @@ You just submit the reference document output by Dockit to your important (and n
 
 ## License
 
-Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
+Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)
 
 License under Apache-v2.
