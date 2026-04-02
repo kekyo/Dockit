@@ -2,12 +2,12 @@
 
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](https://www.repostatus.org/badges/latest/active.svg)](https://www.repostatus.org/#active)
 
-|Package|Link|
-|:----|:----|
-|dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
-|dockit-ts (NPM CLI)|[![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)|
+| Package               | Link                                                                                                                       |
+| :-------------------- | :------------------------------------------------------------------------------------------------------------------------- |
+| dockit-cli (.NET CLI) | [![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli) |
+| dockit-ts (NPM CLI)   | [![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)                 |
 
-----
+---
 
 ## What is this?
 
@@ -24,7 +24,7 @@ This allows you to target a variety of output formats.
 It is also much simpler to manage than other solutions,
 as you simply install NuGet and it automatically generates the documentation for you.
 
-----
+---
 
 ## Install
 
@@ -36,7 +36,7 @@ Install the `NPM` package via npmjs:
 npm install -g dockit-cli
 ```
 
-----
+---
 
 ## Usage
 
@@ -71,7 +71,7 @@ node ./node/dockit-ts/dist/cli.mjs --entry ./src/index.ts ./path/to/package ./do
 
 For more information, please visit repository and refer README: [Dockit](https://github.com/kekyo/Dockit)
 
-----
+---
 
 ## License
 

@@ -22,3 +22,7 @@ dotnet build -p:Configuration=Release -p:Platform="Any CPU" Dockit.sln
 zip artifacts/dockit-${VERSION}.zip README.md LICENSE Images/Dockit.100.png
 (cd dotnet/Dockit/bin/Release; zip ../../../../artifacts/dockit-${VERSION}.zip */*)
 dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -o artifacts Dockit.sln
+
+cd node/dockit-ts
+npm i
+npm run pack
