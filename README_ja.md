@@ -7,7 +7,7 @@
 |Package|Link|
 |:----|:----|
 |dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
-|dockit-ts (NPM CLI)|[![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)|
+|dockit-ts (NPM CLI)|[![NPM dockit-ts](https://img.shields.io/npm/v/dockit-ts.svg)](https://www.npmjs.com/package/dockit-ts)|
 
 ----
 
@@ -47,7 +47,7 @@ dotnet tool install -g dockit-cli
 `NPM` パッケージを npmjs 経由でインストールします。
 
 ```bash
-npm install -g dockit-cli
+npm install -g dockit-ts
 ```
 
 ----
