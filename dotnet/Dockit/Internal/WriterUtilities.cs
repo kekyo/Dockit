@@ -26,6 +26,12 @@ internal static class WriterUtilities
     public static string GetSectionString(int level, string text) =>
         $"{new string('#', level)} {text}";
 
+    public static string GetAnchorString(string anchor) =>
+        $"<a id=\"{EscapeSpecialCharacters(anchor)}\"></a>";
+
+    public static string GetAnchorHref(string markdownFileName, string anchor) =>
+        $"./{EscapeSpecialCharacters(markdownFileName)}#{EscapeSpecialCharacters(anchor)}";
+
     public static async Task WriteObsoleteDetailAsync(
         TextWriter tw, ICustomAttributeProvider member, CancellationToken ct)
     {
@@ -421,22 +427,92 @@ internal static class WriterUtilities
 
     public static string RenderReference(
         XElement element,
-        IReadOnlyDictionary<string, string> hri)
+        IReadOnlyDictionary<string, string> hri,
+        string markdownFileName)
     {
         var cref = element.Attribute("cref")?.Value?.Trim();
         var identity = EscapeSpecialCharacters(string.Join(" ",
             element.Value.Replace("\r", string.Empty).Split('\n').Select(c => c.Trim())));
 
+        static string SimplifyReferenceLabel(string label)
+        {
+            var separatorIndex = label.IndexOf(':');
+            if (separatorIndex >= 0)
+            {
+                label = label.Substring(separatorIndex + 1);
+            }
+
+            var parameterIndex = label.IndexOf('(');
+            if (parameterIndex >= 0)
+            {
+                label = label.Substring(0, parameterIndex);
+            }
+
+            var lastDotIndex = label.LastIndexOf('.');
+            if (lastDotIndex >= 0)
+            {
+                label = label.Substring(lastDotIndex + 1);
+            }
+
+            var genericIndex = label.IndexOf('`');
+            if (genericIndex >= 0)
+            {
+                label = label.Substring(0, genericIndex);
+            }
+
+            label = label switch
+            {
+                "#ctor" => "Constructor",
+                "#cctor" => "Static constructor",
+                _ => label,
+            };
+
+            return EscapeSpecialCharacters(label);
+        }
+
+        static string? NormalizeReferenceKey(string? cref)
+        {
+            if (string.IsNullOrWhiteSpace(cref))
+            {
+                return null;
+            }
+
+            var nonEmptyCref = cref!;
+            return nonEmptyCref.Length >= 3 && nonEmptyCref[1] == ':' ?
+                nonEmptyCref.Substring(2) :
+                nonEmptyCref;
+        }
+
+        string? referenceKey = null;
+        if (!string.IsNullOrWhiteSpace(cref))
+        {
+            var nonEmptyCref = cref!;
+            referenceKey = hri.ContainsKey(nonEmptyCref) ?
+                nonEmptyCref :
+                NormalizeReferenceKey(nonEmptyCref);
+        }
+
+        var resolvedIdentity =
+            string.IsNullOrWhiteSpace(identity) &&
+            cref is { Length: >= 1 } ?
+            SimplifyReferenceLabel(cref) :
+            identity;
+
         return string.IsNullOrWhiteSpace(cref) ?
             $" {identity} " :
-            string.IsNullOrWhiteSpace(identity) ?
-            $" {cref} " :
-            $" [{identity}]({cref}) ";   // TODO: hri
+            referenceKey is { Length: >= 1 } && hri.TryGetValue(referenceKey, out var anchor) ?
+            string.IsNullOrWhiteSpace(resolvedIdentity) ?
+                $" {cref} " :
+                $" [{resolvedIdentity}]({GetAnchorHref(markdownFileName, anchor)}) " :
+            string.IsNullOrWhiteSpace(resolvedIdentity) ?
+                $" {cref} " :
+                $" [{resolvedIdentity}]({cref}) ";
     }
 
     private static void TraverseAndRender(
         StringBuilder sb, XElement element, bool isInline, bool trim,
-        IReadOnlyDictionary<string, string> hri)
+        IReadOnlyDictionary<string, string> hri,
+        string markdownFileName)
     {
         foreach (var node in element.Nodes())
         {
@@ -447,7 +523,7 @@ internal static class WriterUtilities
                     sb.AppendLine();
                     if (childElement.Nodes().Any())
                     {
-                        TraverseAndRender(sb, childElement, isInline, false, hri);
+                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName);
                     }
                     break;
 
@@ -488,7 +564,7 @@ internal static class WriterUtilities
 
                 case XElement childElement when
                         childElement.Name == "see":
-                    sb.Append(RenderReference(childElement, hri));
+                    sb.Append(RenderReference(childElement, hri, markdownFileName));
                     break;
 
                 case XElement childElement:
@@ -499,7 +575,7 @@ internal static class WriterUtilities
                     if (childElement.Nodes().Any())
                     {
                         sb.Append($"<{childElement.Name}{attributes}>");
-                        TraverseAndRender(sb, childElement, isInline, false, hri);
+                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName);
                         sb.Append($"</{childElement.Name}>");
                     }
                     else
@@ -522,10 +598,11 @@ internal static class WriterUtilities
     public static string RenderDotNetXmlElement(
         XElement element,
         bool isInline,
-        IReadOnlyDictionary<string, string> hri)
+        IReadOnlyDictionary<string, string> hri,
+        string markdownFileName)
     {
         var sb = new StringBuilder();
-        TraverseAndRender(sb, element, isInline, true, hri);
+        TraverseAndRender(sb, element, isInline, true, hri, markdownFileName);
         return sb.ToString();
     }
 }

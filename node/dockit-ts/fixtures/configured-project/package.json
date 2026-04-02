@@ -1,0 +1,11 @@
+{
+  "name": "dockit-configured-fixture",
+  "version": "0.2.0",
+  "type": "module",
+  "dockit": {
+    "entryPoints": {
+      ".": "./src/index.ts",
+      "./extra": "./src/extra.ts"
+    }
+  }
+}

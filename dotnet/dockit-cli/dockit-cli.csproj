@@ -11,7 +11,7 @@
     <RollForward>Major</RollForward>
     <NoPackageAnalysis>true</NoPackageAnalysis>
     <IncludeBuildOutput>false</IncludeBuildOutput>
-    <AssemblyName>dockit</AssemblyName>
+    <AssemblyName>dockit-dotnet</AssemblyName>
   </PropertyGroup>
 
   <ItemGroup>

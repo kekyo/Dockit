@@ -126,8 +126,9 @@ public static class Program
             "Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)");
         writer.WriteLine(
             $"https://github.com/kekyo/Dockit");
+        writer.WriteLine("License: Under MIT.");
         writer.WriteLine();
-        writer.WriteLine("Usage: dockit [options] <assembly-path> <output-directory>");
+        writer.WriteLine("Usage: dockit-dotnet [options] <assembly-path> <output-directory>");
         writer.WriteLine("Options:");
         CreateOptionSet(
             _ => { },

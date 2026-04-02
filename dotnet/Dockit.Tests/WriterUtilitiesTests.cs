@@ -31,18 +31,38 @@ public sealed class WriterUtilitiesTests
         var rendered = WriterUtilities.RenderDotNetXmlElement(
             element,
             false,
-            new Dictionary<string, string>());
+            new Dictionary<string, string>
+            {
+                ["Fixture.Root.VisibilityContainer"] = "visibilitycontainer-class",
+            },
+            "fixture.md");
 
         Assert.Multiple(() =>
         {
             Assert.That(rendered, Does.Contain("Intro &amp; detail"));
             Assert.That(rendered, Does.Contain("Paragraph with"));
             Assert.That(rendered, Does.Contain("`inline`"));
-            Assert.That(rendered, Does.Contain("[VisibilityContainer](T:Fixture.Root.VisibilityContainer)"));
+            Assert.That(rendered, Does.Contain("[VisibilityContainer](./fixture.md#visibilitycontainer-class)"));
             Assert.That(rendered, Does.Contain("```csharp"));
             Assert.That(rendered, Does.Contain("if (value < 1)"));
             Assert.That(rendered, Does.Contain("<custom attr=\"1\">custom text</custom>"));
         });
+    }
+
+    [Test]
+    public void RenderReference_renders_local_cref_with_a_simplified_label()
+    {
+        var element = XElement.Parse("""<seealso cref="P:Fixture.Root.GenericSample`2.Name" />""");
+
+        var rendered = WriterUtilities.RenderReference(
+            element,
+            new Dictionary<string, string>
+            {
+                ["Fixture.Root.GenericSample`2.Name"] = "name-property",
+            },
+            "fixture.md");
+
+        Assert.That(rendered, Is.EqualTo(" [Name](./fixture.md#name-property) "));
     }
 
     [Test]

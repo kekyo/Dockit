@@ -24,7 +24,7 @@ public sealed class ProgramTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
             Assert.That(errorWriter.ToString(), Does.Contain("Expected <assembly-path> and <output-directory>."));
-            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit [options] <assembly-path> <output-directory>"));
+            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
             Assert.That(errorWriter.ToString(), Does.Contain("--help"));
         });
     }
@@ -44,7 +44,7 @@ public sealed class ProgramTests
         {
             Assert.That(exitCode, Is.EqualTo(0));
             Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
-            Assert.That(outputWriter.ToString(), Does.Contain("Usage: dockit [options] <assembly-path> <output-directory>"));
+            Assert.That(outputWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
             Assert.That(outputWriter.ToString(), Does.Contain("--initial-level"));
         });
     }
@@ -115,7 +115,7 @@ public sealed class ProgramTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
             Assert.That(errorWriter.ToString(), Does.Contain("Initial level must be 1 or greater."));
-            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit [options] <assembly-path> <output-directory>"));
+            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
         });
     }
 }

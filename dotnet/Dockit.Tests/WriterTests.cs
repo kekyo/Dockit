@@ -13,7 +13,9 @@ public sealed class WriterTests
     [Test]
     public async Task WriteMarkdownAsync_writes_assembly_metadata_and_namespace_index()
     {
-        var markdown = await RenderMarkdownAsync();
+        var result = await RenderMarkdownAsync();
+        var markdown = result.Markdown;
+        var markdownFileName = result.MarkdownFileName;
 
         Assert.Multiple(() =>
         {
@@ -21,24 +23,29 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `AssemblyVersion` | &quot;1.2.3.4&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyFileVersion` | &quot;4.3.2.1&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyInformationalVersion` | &quot;1.2.3-test+metadata&quot; |"));
-            Assert.That(markdown, Does.Contain("| [ `Fixture.Root` ](#fixture.root-namespace) |"));
-            Assert.That(markdown, Does.Contain("| [ `Fixture.Secondary` ](#fixture.secondary-namespace) |"));
+            Assert.That(markdown, Does.Contain($"| [ `Fixture.Root` ](./{markdownFileName}#fixture.root-namespace) |"));
+            Assert.That(markdown, Does.Contain($"| [ `Fixture.Secondary` ](./{markdownFileName}#fixture.secondary-namespace) |"));
+            Assert.That(markdown, Does.Contain("<a id=\"fixture.root-namespace\"></a>"));
         });
     }
 
     [Test]
     public async Task WriteMarkdownAsync_writes_generic_type_sections_and_xml_comment_content()
     {
-        var markdown = await RenderMarkdownAsync();
+        var result = await RenderMarkdownAsync();
+        var markdown = result.Markdown;
+        var markdownFileName = result.MarkdownFileName;
 
         Assert.Multiple(() =>
         {
             Assert.That(markdown, Does.Contain("### GenericSample&lt;TItem,TValue&gt; class"));
+            Assert.That(markdown, Does.Contain("<a id=\"genericsampletitemtvalue-class\"></a>"));
             Assert.That(markdown, Does.Contain("Represents a generic sample type."));
             Assert.That(markdown, Does.Contain("| `TItem` | Primary item type. |"));
             Assert.That(markdown, Does.Contain("| `TValue` | Secondary value type. |"));
-            Assert.That(markdown, Does.Contain("Type remarks with"));
+            Assert.That(markdown, Does.Contain($"Type remarks with [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
             Assert.That(markdown, Does.Contain("var sample = new GenericSample<int, string>();"));
+            Assert.That(markdown, Does.Contain($"See also: [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
 
             Assert.That(markdown, Does.Contain("#### Constructor"));
             Assert.That(markdown, Does.Contain("Initializes a new instance."));
@@ -51,6 +58,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `item` | Item parameter. |"));
             Assert.That(markdown, Does.Contain("| `values` | Values parameter. |"));
             Assert.That(markdown, Does.Contain("| Transformation result. |"));
+            Assert.That(markdown, Does.Contain($"See also: [Name](./{markdownFileName}#name-property)"));
 
             Assert.That(markdown, Does.Contain("Converts a sample to a string."));
             Assert.That(markdown, Does.Contain("Raises the changed event."));
@@ -62,12 +70,14 @@ public sealed class WriterTests
     [Test]
     public async Task WriteMarkdownAsync_writes_event_indexes_and_enum_tables()
     {
-        var markdown = await RenderMarkdownAsync();
+        var result = await RenderMarkdownAsync();
+        var markdown = result.Markdown;
+        var markdownFileName = result.MarkdownFileName;
 
         Assert.Multiple(() =>
         {
-            Assert.That(markdown, Does.Contain("|Event| [ `Changed` ]("));
-            Assert.That(markdown, Does.Contain("|Event| [ `VisibleEvent` ]("));
+            Assert.That(markdown, Does.Contain($"|Event| [ `Changed` ](./{markdownFileName}#changed-event)"));
+            Assert.That(markdown, Does.Contain($"|Event| [ `VisibleEvent` ](./{markdownFileName}#visibleevent-event)"));
             Assert.That(markdown, Does.Contain("### SampleState enum"));
             Assert.That(markdown, Does.Contain("|Enum value|Description|"));
             Assert.That(markdown, Does.Contain("| `Started` | Started state. Used while processing is active. |"));
@@ -111,25 +121,31 @@ public sealed class WriterTests
         }
     }
 
-    private static async Task<string> RenderMarkdownAsync()
+    private static async Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync()
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var document = await FixtureArtifacts.LoadDocumentAsync();
 
-        var path = Path.Combine(
+        var directoryPath = Path.Combine(
             TestContext.CurrentContext.WorkDirectory,
-            $"writer-{Guid.NewGuid():N}.md");
+            $"writer-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(directoryPath);
+        var path = Path.Combine(directoryPath, "Dockit.TestAssembly.md");
 
         try
         {
             await Writer.WriteMarkdownAsync(path, assembly, document, 1, CancellationToken.None);
-            return await File.ReadAllTextAsync(path);
+            return (await File.ReadAllTextAsync(path), Path.GetFileName(path));
         }
         finally
         {
             if (File.Exists(path))
             {
                 File.Delete(path);
+            }
+            if (Directory.Exists(directoryPath))
+            {
+                Directory.Delete(directoryPath, true);
             }
         }
     }

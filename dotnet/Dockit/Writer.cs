@@ -30,28 +30,43 @@ internal static class Writer
         //"System.Reflection.AssemblyConfigurationAttribute",
     };
 
+    private static async Task WriteSectionAsync(
+        TextWriter tw,
+        int level,
+        string text,
+        string? anchor,
+        CancellationToken ct)
+    {
+        if (anchor is { Length: >= 1 })
+        {
+            await tw.WriteLineAsync(WriterUtilities.GetAnchorString(anchor));
+        }
+        await tw.WriteLineAsync(WriterUtilities.GetSectionString(level, text));
+    }
+
     private static async Task WriteRemarksAsync(
         TextWriter tw,
         DotNetXmlMember? dotNetXmlMember,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
         if (dotNetXmlMember?.Remarks is { } memberRemarks)
         {
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberRemarks, false, hri));
+            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberRemarks, false, hri, markdownFileName));
         }
 
         if (dotNetXmlMember?.Example is { } memberExamples)
         {
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberExamples, false, hri));
+            await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberExamples, false, hri, markdownFileName));
         }
 
         if (dotNetXmlMember?.SeeAlso is { } memberSeeAlso)
         {
             await tw.WriteLineAsync();
-            await tw.WriteLineAsync($"See also: {WriterUtilities.RenderReference(memberSeeAlso, hri)}");
+            await tw.WriteLineAsync($"See also: {WriterUtilities.RenderReference(memberSeeAlso, hri, markdownFileName).Trim()}");
         }
     }
 
@@ -61,11 +76,15 @@ internal static class Writer
         FieldDefinition field,
         int initialLevel,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
+        await WriteSectionAsync(
+            tw,
             initialLevel + 3,
-            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(field))} field"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(field))} field",
+            hri.TryGetValue(FullNaming.GetFullName(field), out var anchor) ? anchor : null,
+            ct);
 
         await WriterUtilities.WriteObsoleteDetailAsync(tw, field, ct);
 
@@ -77,7 +96,7 @@ internal static class Writer
             if (dotNetXmlField.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri, markdownFileName));
             }
         }
 
@@ -88,7 +107,7 @@ internal static class Writer
             $"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
         await tw.WriteLineAsync("```");
 
-        await WriteRemarksAsync(tw, dotNetXmlField, hri, ct);
+        await WriteRemarksAsync(tw, dotNetXmlField, hri, markdownFileName, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -99,11 +118,15 @@ internal static class Writer
         PropertyDefinition property,
         int initialLevel,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
+        await WriteSectionAsync(
+            tw,
             initialLevel + 3,
-            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}",
+            hri.TryGetValue(FullNaming.GetFullName(property), out var anchor) ? anchor : null,
+            ct);
 
         await WriterUtilities.WriteObsoleteDetailAsync(tw, property, ct);
 
@@ -115,7 +138,7 @@ internal static class Writer
             if (dotNetXmlProperty.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri, markdownFileName));
             }
         }
 
@@ -139,7 +162,7 @@ internal static class Writer
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
 
-        await WriteRemarksAsync(tw, dotNetXmlProperty, hri, ct);
+        await WriteRemarksAsync(tw, dotNetXmlProperty, hri, markdownFileName, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -150,11 +173,15 @@ internal static class Writer
         EventDefinition @event,
         int initialLevel,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
+        await WriteSectionAsync(
+            tw,
             initialLevel + 3,
-            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(@event))} event"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(@event))} event",
+            hri.TryGetValue(FullNaming.GetFullName(@event), out var anchor) ? anchor : null,
+            ct);
 
         await WriterUtilities.WriteObsoleteDetailAsync(tw, @event, ct);
 
@@ -166,7 +193,7 @@ internal static class Writer
             if (dotNetXmlEvent.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri, markdownFileName));
             }
         }
 
@@ -190,7 +217,7 @@ internal static class Writer
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
 
-        await WriteRemarksAsync(tw, dotNetXmlEvent, hri, ct);
+        await WriteRemarksAsync(tw, dotNetXmlEvent, hri, markdownFileName, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -201,14 +228,21 @@ internal static class Writer
         MethodDefinition method,
         int initialLevel,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
         var title = method.IsConstructor ?
             "Constructor" :
             $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(method))}(){(CecilUtilities.IsExtensionMethod(method) ? " extension" : "")} method";
 
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
-            initialLevel + 3, title));
+        await WriteSectionAsync(
+            tw,
+            initialLevel + 3,
+            title,
+            hri.TryGetValue(FullNaming.GetFullName(method), out var anchor) ?
+                anchor :
+                hri.TryGetValue(FullNaming.GetFullSignaturedName(method), out anchor) ? anchor : null,
+            ct);
 
         await WriterUtilities.WriteObsoleteDetailAsync(tw, method, ct);
 
@@ -221,7 +255,7 @@ internal static class Writer
             if (dotNetXmlMethod.Summary is { } memberSummary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(memberSummary, false, hri, markdownFileName));
             }
         }
 
@@ -249,7 +283,7 @@ internal static class Writer
                         dotNetParameter.Description is { } description)
                     {
                         await tw.WriteLineAsync(
-                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri, markdownFileName)} |");
                     }
                     else
                     {
@@ -265,8 +299,8 @@ internal static class Writer
                 if (dotNetXmlMethod?.TypeParameters.FirstOrDefault(p => p.Name == gpn) is { } dotNetParameter &&
                     dotNetParameter.Description is { } description)
                 {
-                    await tw.WriteLineAsync(
-                        $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                        await tw.WriteLineAsync(
+                            $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri, markdownFileName)} |");
                 }
                 else
                 {
@@ -291,7 +325,7 @@ internal static class Writer
                     dotNetParameter.Description is { } description)
                 {
                     await tw.WriteLineAsync(
-                        $"| `{Naming.GetName(parameter)}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                        $"| `{Naming.GetName(parameter)}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri, markdownFileName)} |");
                 }
                 else
                 {
@@ -310,7 +344,7 @@ internal static class Writer
             if (dotNetXmlMethod?.Returns is { } returns)
             {
                 await tw.WriteLineAsync(
-                    $"| {WriterUtilities.RenderDotNetXmlElement(returns, true, hri)} |");
+                    $"| {WriterUtilities.RenderDotNetXmlElement(returns, true, hri, markdownFileName)} |");
             }
             else
             {
@@ -319,7 +353,7 @@ internal static class Writer
             }
         }
 
-        await WriteRemarksAsync(tw, dotNetXmlMethod, hri, ct);
+        await WriteRemarksAsync(tw, dotNetXmlMethod, hri, markdownFileName, ct);
     }
 
     //////////////////////////////////////////////////////////////////////////
@@ -386,11 +420,15 @@ internal static class Writer
         int initialLevel,
         VisibleMembers visibleMembers,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
+        await WriteSectionAsync(
+            tw,
             initialLevel + 2,
-            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(type))} {CecilUtilities.GetTypeKeywordString(type)}"));
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(type))} {CecilUtilities.GetTypeKeywordString(type)}",
+            hri.TryGetValue(FullNaming.GetFullName(type), out var anchor) ? anchor : null,
+            ct);
 
         await WriterUtilities.WriteObsoleteDetailAsync(tw, type, ct);
 
@@ -403,7 +441,7 @@ internal static class Writer
             if (dotNetXmlType.Summary is { } summary)
             {
                 await tw.WriteLineAsync();
-                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(summary, false, hri));
+                await tw.WriteLineAsync(WriterUtilities.RenderDotNetXmlElement(summary, false, hri, markdownFileName));
             }
         }
 
@@ -445,9 +483,9 @@ internal static class Writer
                     out var dotNetXmlField))
                 {
                     var summary = dotNetXmlField.Summary is { } s ?
-                        WriterUtilities.RenderDotNetXmlElement(s, true, hri) : "";
+                        WriterUtilities.RenderDotNetXmlElement(s, true, hri, markdownFileName) : "";
                     var remarks = dotNetXmlField.Remarks is { } r ?
-                        WriterUtilities.RenderDotNetXmlElement(r, true, hri) : "";
+                        WriterUtilities.RenderDotNetXmlElement(r, true, hri, markdownFileName) : "";
                     await tw.WriteLineAsync(
                         $"| `{Naming.GetName(field)}` | {summary} {remarks} |");
                 }
@@ -521,7 +559,7 @@ internal static class Writer
                         dotNetParameter.Description is { } description)
                     {
                         await tw.WriteLineAsync(
-                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                            $"| `{gan}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri, markdownFileName)} |");
                     }
                     else
                     {
@@ -538,7 +576,7 @@ internal static class Writer
                     dotNetParameter.Description is { } description)
                 {
                     await tw.WriteLineAsync(
-                        $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri)} |");
+                        $"| `{gpn}` | {WriterUtilities.RenderDotNetXmlElement(description, true, hri, markdownFileName)} |");
                 }
                 else
                 {
@@ -548,7 +586,7 @@ internal static class Writer
             }
         }
 
-        await WriteRemarksAsync(tw, dotNetXmlType, hri, ct);
+        await WriteRemarksAsync(tw, dotNetXmlType, hri, markdownFileName, ct);
 
         if (!isDelegateType && !isEnumType)
         {
@@ -566,7 +604,7 @@ internal static class Writer
                     var memberList = string.Join(", ", visibleMembers.Fields.
                         Select(f =>
                             hri.TryGetValue(FullNaming.GetFullName(f), out var id) ?
-                            $"[ `{Naming.GetName(f)}` ](#{id})" :
+                            $"[ `{Naming.GetName(f)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                             $"`{Naming.GetName(f)}`"));
                     await tw.WriteLineAsync($"|Field| {memberList} |");
                 }
@@ -576,7 +614,7 @@ internal static class Writer
                     var memberList = string.Join(", ", visibleMembers.Properties.
                         Select(p =>
                             hri.TryGetValue(FullNaming.GetFullName(p), out var id) ?
-                            $"[ `{Naming.GetName(p)}` ](#{id})" :
+                            $"[ `{Naming.GetName(p)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                             $"`{Naming.GetName(p)}`"));
                     await tw.WriteLineAsync($"|Property| {memberList} |");
                 }
@@ -586,7 +624,7 @@ internal static class Writer
                     var memberList = string.Join(", ", visibleMembers.Events.
                         Select(e =>
                             hri.TryGetValue(FullNaming.GetFullName(e), out var id) ?
-                            $"[ `{Naming.GetName(e)}` ](#{id})" :
+                            $"[ `{Naming.GetName(e)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                             $"`{Naming.GetName(e)}`"));
                     await tw.WriteLineAsync($"|Event| {memberList} |");
                 }
@@ -598,7 +636,7 @@ internal static class Writer
                         DistinctBy(m => Naming.GetName(m)).
                         Select(m =>
                             hri.TryGetValue(FullNaming.GetFullName(m), out var id) ?
-                            $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ](#{id})" :
+                            $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                             $"`{Naming.GetName(m, MethodForms.WithBraces)}`"));
                     await tw.WriteLineAsync($"|Method| {memberList} |");
                 }
@@ -610,7 +648,7 @@ internal static class Writer
             foreach (var field in visibleMembers.Fields)
             {
                 await tw.WriteLineAsync();
-                await WriteFieldsAsync(tw, dotNetDocument, field, initialLevel, hri, ct);
+                await WriteFieldsAsync(tw, dotNetDocument, field, initialLevel, hri, markdownFileName, ct);
             }
 
             /////////////////////////////////////////////////////////
@@ -619,7 +657,7 @@ internal static class Writer
             foreach (var property in visibleMembers.Properties)
             {
                 await tw.WriteLineAsync();
-                await WritePropertyAsync(tw, dotNetDocument, property, initialLevel, hri, ct);
+                await WritePropertyAsync(tw, dotNetDocument, property, initialLevel, hri, markdownFileName, ct);
             }
 
             /////////////////////////////////////////////////////////
@@ -628,7 +666,7 @@ internal static class Writer
             foreach (var @event in visibleMembers.Events)
             {
                 await tw.WriteLineAsync();
-                await WriteEventAsync(tw, dotNetDocument, @event, initialLevel, hri, ct);
+                await WriteEventAsync(tw, dotNetDocument, @event, initialLevel, hri, markdownFileName, ct);
             }
 
             /////////////////////////////////////////////////////////
@@ -637,7 +675,7 @@ internal static class Writer
             foreach (var method in visibleMembers.Methods)
             {
                 await tw.WriteLineAsync();
-                await WriteMethodAsync(tw, dotNetDocument, method, initialLevel, hri, ct);
+                await WriteMethodAsync(tw, dotNetDocument, method, initialLevel, hri, markdownFileName, ct);
             }
         }
     }
@@ -651,11 +689,15 @@ internal static class Writer
         string @namespace,
         int initialLevel,
         IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
         CancellationToken ct)
     {
-        await tw.WriteLineAsync(WriterUtilities.GetSectionString(
+        await WriteSectionAsync(
+            tw,
             initialLevel + 1,
-            $"{WriterUtilities.EscapeSpecialCharacters(@namespace)} namespace"));
+            $"{WriterUtilities.EscapeSpecialCharacters(@namespace)} namespace",
+            hri.TryGetValue(@namespace, out var anchor) ? anchor : null,
+            ct);
 
         /////////////////////////////////////////////////////////
         // Type index table.
@@ -682,13 +724,13 @@ internal static class Writer
                 // Because all overload methods are same name.
                 DistinctBy(m => Naming.GetName(m)).
                 Select(m => (!isEnum && hri.TryGetValue(FullNaming.GetFullName(m), out var id)) ? 
-                    $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ](#{id})" :
+                    $"[ `{Naming.GetName(m, MethodForms.WithBraces)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                     $"`{Naming.GetName(m, MethodForms.WithBraces)}`"));
             if (memberList.Length >= 1)
             {
                 await tw.WriteLineAsync(
                     hri.TryGetValue(FullNaming.GetFullName(type), out var id) ?
-                        $"| [ `{Naming.GetName(type)}` ](#{id}) | {memberList} |" :
+                        $"| [ `{Naming.GetName(type)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)}) | {memberList} |" :
                         $"| `{Naming.GetName(type)}` | {memberList} |");
             }
 
@@ -702,7 +744,7 @@ internal static class Writer
         {
             await tw.WriteLineAsync();
             await WriteTypeAsync(
-                tw, dotNetDocument, type, initialLevel, membersByType[type], hri, ct);
+                tw, dotNetDocument, type, initialLevel, membersByType[type], hri, markdownFileName, ct);
         }
     }
 
@@ -754,6 +796,7 @@ internal static class Writer
         // Retrieve hash reference identities.
 
         var hri = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+        var markdownFileName = Path.GetFileName(markdownPath);
 
         /////////////////////////////////////////////////////////
         // Examine namespaces.
@@ -780,12 +823,12 @@ internal static class Writer
                 Where(t => t.Namespace == @namespace).
                 OrderBy(t => Naming.GetName(t)).
                 Select(t => hri.TryGetValue(FullNaming.GetFullName(t), out var id) ?
-                    $"[ `{Naming.GetName(t)}` ](#{id})" :
+                    $"[ `{Naming.GetName(t)}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)})" :
                     $"`{Naming.GetName(t)}`"));
 
             await tw.WriteLineAsync(
                 hri.TryGetValue(@namespace, out var id) ?
-                    $"| [ `{@namespace}` ](#{id}) | {types} |" :
+                    $"| [ `{@namespace}` ]({WriterUtilities.GetAnchorHref(markdownFileName, id)}) | {types} |" :
                     $"| `{@namespace}` | {types} |");
         }
 
@@ -796,7 +839,7 @@ internal static class Writer
         {
             await tw.WriteLineAsync();
             await WriteNamespaceAsync(
-                tw, dotNetDocument, assembly, @namespace, initialLevel, hri, ct);
+                tw, dotNetDocument, assembly, @namespace, initialLevel, hri, markdownFileName, ct);
         }
 
         await tw.FlushAsync();
