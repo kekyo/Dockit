@@ -59,6 +59,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `values` | Values parameter. |"));
             Assert.That(markdown, Does.Contain("| Transformation result. |"));
             Assert.That(markdown, Does.Contain($"See also: [Name](./{markdownFileName}#name-property)"));
+            Assert.That(markdown, Does.Contain("#### HandleMatrix() method"));
+            Assert.That(markdown, Does.Contain("int[,] matrix"));
 
             Assert.That(markdown, Does.Contain("Converts a sample to a string."));
             Assert.That(markdown, Does.Contain("Raises the changed event."));
