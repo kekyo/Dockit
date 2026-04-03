@@ -39,8 +39,11 @@ internal static class WriterUtilities
     public static string GetAnchorString(string anchor) =>
         $"<a name=\"{EscapeSpecialCharacters(anchor)}\"></a>";
 
-    public static string GetAnchorHref(string markdownFileName, string anchor) =>
-        $"./{EscapeSpecialCharacters(markdownFileName)}#{EscapeSpecialCharacters(anchor)}";
+    public static string GetAnchorHref(string markdownFileName, string anchor)
+    {
+        _ = markdownFileName;
+        return $"#{EscapeSpecialCharacters(anchor)}";
+    }
 
     public static async Task WriteObsoleteDetailAsync(
         TextWriter tw, ICustomAttributeProvider member, CancellationToken ct)

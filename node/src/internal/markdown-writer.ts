@@ -32,8 +32,10 @@ interface AnchorMaps {
 const createSection = (level: number, title: string): string =>
   `${'#'.repeat(level)} ${title}`;
 
-const createAnchorHref = (markdownFileName: string, anchor: string): string =>
-  `./${markdownFileName}#${anchor}`;
+const createAnchorHref = (markdownFileName: string, anchor: string): string => {
+  void markdownFileName;
+  return `#${anchor}`;
+};
 
 const createAnchorElement = (anchor: string): string =>
   `<a name="${anchor}"></a>`;
