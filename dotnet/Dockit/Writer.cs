@@ -103,8 +103,11 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, field, 0, ct);
+        var fieldValue = field.IsLiteral ?
+            $" = {WriterUtilities.GetPrettyPrintValue(field.Constant, field.FieldType)}" :
+            string.Empty;
         await tw.WriteLineAsync(
-            $"{CecilUtilities.GetModifierKeywordString(field)} {NullableReferenceTypes.GetName(field.FieldType, NullableReferenceTypes.CreateFieldContext(field))} {Naming.GetName(field)};");
+            $"{CecilUtilities.GetModifierKeywordString(field)} {NullableReferenceTypes.GetName(field.FieldType, NullableReferenceTypes.CreateFieldContext(field))} {Naming.GetName(field)}{fieldValue};");
         await tw.WriteLineAsync("```");
 
         await WriteRemarksAsync(tw, dotNetXmlField, hri, markdownFileName, ct);

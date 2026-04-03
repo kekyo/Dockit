@@ -129,4 +129,15 @@ public sealed class WriterUtilitiesTests
             WriterUtilities.GetCustomAttributeDeclarationWithTarget("[MaybeNull]", "return"),
             Is.EqualTo("[return: MaybeNull]"));
     }
+
+    [Test]
+    public void GetPrettyPrintValue_formats_enum_values_symbolically()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var enumType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "SampleState");
+
+        Assert.That(
+            WriterUtilities.GetPrettyPrintValue(1, enumType),
+            Is.EqualTo("SampleState.Started"));
+    }
 }

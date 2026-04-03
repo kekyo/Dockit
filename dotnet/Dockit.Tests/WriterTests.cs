@@ -47,6 +47,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain($"Type remarks with [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
             Assert.That(markdown, Does.Contain("var sample = new GenericSample<int, string>();"));
             Assert.That(markdown, Does.Contain($"See also: [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
+            Assert.That(markdown, Does.Contain("public const SampleState InitialState = SampleState.Started;"));
 
             Assert.That(markdown, Does.Contain("#### Constructor"));
             Assert.That(markdown, Does.Contain("Initializes a new instance."));
@@ -97,6 +98,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("List<string?>? values"));
             Assert.That(markdown, Does.Contain("[return: MaybeNull]"));
             Assert.That(markdown, Does.Contain("string ReturnMaybeNull("));
+            Assert.That(markdown, Does.Contain("[EditorBrowsable(EditorBrowsableState.Always)]"));
         });
     }
 

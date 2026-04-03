@@ -311,13 +311,13 @@ internal static class WriterUtilities
             {
                 await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)},");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, enumType.GetEnumUnderlyingType())},");
             }
             else
             {
                 await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)}");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, enumType.GetEnumUnderlyingType())}");
             }
         }
 
@@ -329,7 +329,12 @@ internal static class WriterUtilities
         object? value, TypeReference type) =>
         value switch
         {
-            // TODO: Enum types
+            _ when CecilUtilities.IsEnumType(type) =>
+                type.Resolve().Fields.
+                Where(field => field.IsLiteral && field.Constant is not null).
+                FirstOrDefault(field => System.Convert.ToDecimal(field.Constant) == System.Convert.ToDecimal(value)) is { } matchedField ?
+                    $"{Naming.GetName(type)}.{Naming.GetName(matchedField)}" :
+                    value?.ToString() ?? type.Name,
             null => "null",
             bool b => b ? "true" : "false",
             long l => $"{l}L",

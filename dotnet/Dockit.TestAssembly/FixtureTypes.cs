@@ -136,6 +136,9 @@ namespace Fixture.Root
         /// <summary>Gets a shared value.</summary>
         public static readonly string SharedField = "shared";
 
+        /// <summary>Gets the initial state.</summary>
+        public const SampleState InitialState = SampleState.Started;
+
         /// <summary>Represents mutable data.</summary>
         /// <remarks>Legacy field.</remarks>
         [Obsolete("Use SharedField instead.")]
@@ -288,6 +291,7 @@ namespace Fixture.Root
         internal event EventHandler? HiddenEvent;
 
         /// <summary>Visible method.</summary>
+        [EditorBrowsable(EditorBrowsableState.Always)]
         public void VisibleMethod()
         {
         }
