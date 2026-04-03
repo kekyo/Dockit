@@ -102,4 +102,23 @@ public sealed class WriterUtilitiesTests
             Assert.That(overloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
         });
     }
+
+    [Test]
+    public void GetGenericConstraintClauses_formats_type_and_method_constraints()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var constrainedType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "ConstrainedContainer`1");
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var constrainedMethod = genericType.Methods.Single(method => method.Name == "CreateConstrained");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                WriterUtilities.GetGenericConstraintClauses(constrainedType),
+                Is.EqualTo(new[] { "where TValue : BaseType, IMarker, new()" }));
+            Assert.That(
+                WriterUtilities.GetGenericConstraintClauses(constrainedMethod),
+                Is.EqualTo(new[] { "where TResult : BaseType, IMarker, new()" }));
+        });
+    }
 }

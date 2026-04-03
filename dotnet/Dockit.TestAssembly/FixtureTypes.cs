@@ -63,6 +63,13 @@ namespace Fixture.Root
         public static extern bool MessageBeep(uint type);
     }
 
+    /// <summary>Represents a constrained container.</summary>
+    /// <typeparam name="TValue">Constrained value type.</typeparam>
+    public class ConstrainedContainer<TValue>
+        where TValue : BaseType, IMarker, new()
+    {
+    }
+
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>
     public class Outer<TOuter>
@@ -178,6 +185,13 @@ namespace Fixture.Root
         public void RewriteMap(ref Dictionary<string, TItem> map)
         {
         }
+
+        /// <summary>Creates a constrained result.</summary>
+        /// <typeparam name="TResult">Result type.</typeparam>
+        /// <returns>Created result.</returns>
+        public TResult CreateConstrained<TResult>()
+            where TResult : BaseType, IMarker, new() =>
+            new();
 
         /// <summary>Handles a matrix.</summary>
         /// <param name="matrix">Matrix parameter.</param>

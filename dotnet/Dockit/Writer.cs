@@ -534,6 +534,11 @@ internal static class Writer
                 }
             }
 
+            foreach (var clause in WriterUtilities.GetGenericConstraintClauses(type))
+            {
+                await tw.WriteLineAsync($"    {clause}");
+            }
+
             await tw.WriteLineAsync("{");
             await tw.WriteLineAsync($"    // Total members: {visibleMembers.OverallMembers.Length}");
             await tw.WriteLineAsync("}");

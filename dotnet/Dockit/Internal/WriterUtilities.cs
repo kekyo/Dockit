@@ -112,12 +112,77 @@ internal static class WriterUtilities
         }
     }
 
-    private static async Task WriteSignatureBodyAsync(
+    public static string[] GetGenericConstraintClauses(
+        IGenericParameterProvider provider) =>
+        provider.GenericParameters.
+        Select(genericParameter =>
+        {
+            var constraints = new List<string>();
+
+            if (genericParameter.HasNotNullableValueTypeConstraint)
+            {
+                constraints.Add("struct");
+            }
+            else if (genericParameter.HasReferenceTypeConstraint)
+            {
+                constraints.Add("class");
+            }
+
+            constraints.AddRange(genericParameter.Constraints.
+                Select(constraint => Naming.GetName(constraint.ConstraintType)).
+                Where(constraint => constraint != "ValueType"));
+
+            if (genericParameter.HasDefaultConstructorConstraint &&
+                !genericParameter.HasNotNullableValueTypeConstraint)
+            {
+                constraints.Add("new()");
+            }
+
+            return constraints.Count >= 1 ?
+                $"where {genericParameter.Name} : {string.Join(", ", constraints)}" :
+                null;
+        }).
+        Where(clause => clause is not null).
+        Cast<string>().
+        ToArray();
+
+    public static async Task WriteGenericConstraintClausesAsync(
+        TextWriter tw,
+        IGenericParameterProvider provider,
+        int indent,
+        string terminator,
+        CancellationToken ct)
+    {
+        var clauses = GetGenericConstraintClauses(provider);
+        if (clauses.Length == 0)
+        {
+            await tw.WriteLineAsync(terminator);
+            return;
+        }
+
+        await tw.WriteLineAsync();
+
+        var indentString = new string(' ', indent);
+        for (var index = 0; index < clauses.Length; index++)
+        {
+            var clause = clauses[index];
+            if (index < clauses.Length - 1)
+            {
+                await tw.WriteLineAsync(indentString + clause);
+            }
+            else
+            {
+                await tw.WriteLineAsync(indentString + clause + terminator);
+            }
+        }
+    }
+
+    private static async Task WriteSignatureParameterListAsync(
         TextWriter tw, MethodReference method, CancellationToken ct)
     {
         if (method.Parameters.Count == 0)
         {
-            await tw.WriteLineAsync(");");
+            await tw.WriteAsync(")");
         }
         else
         {
@@ -144,8 +209,8 @@ internal static class WriterUtilities
                 }
                 else
                 {
-                    await tw.WriteLineAsync(
-                        $"    {preSignature}{typeName} {parameterName}{defaultValue});");
+                    await tw.WriteAsync(
+                        $"    {preSignature}{typeName} {parameterName}{defaultValue})");
                 }
             }
         }
@@ -168,7 +233,8 @@ internal static class WriterUtilities
                 $"{CecilUtilities.GetModifierKeywordString(m)} {Naming.GetName(m, MethodForms.WithPreBrace | MethodForms.WithReturnType)}");
         }
 
-        await WriteSignatureBodyAsync(tw, m, ct);
+        await WriteSignatureParameterListAsync(tw, m, ct);
+        await WriteGenericConstraintClausesAsync(tw, m, 4, ";", ct);
     }
 
     public static async Task WriteDelegateSignatureAsync(
@@ -179,7 +245,8 @@ internal static class WriterUtilities
         await WriteCustomAttributesAsync(tw, delegateType, 0, ct);
         await tw.WriteAsync(
             $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {Naming.GetName(m.ReturnType)} {Naming.GetName(delegateType)}(");
-        await WriteSignatureBodyAsync(tw, m, ct);
+        await WriteSignatureParameterListAsync(tw, m, ct);
+        await WriteGenericConstraintClausesAsync(tw, delegateType, 4, ";", ct);
     }
 
     public static async Task WriteEnumValuesAsync(

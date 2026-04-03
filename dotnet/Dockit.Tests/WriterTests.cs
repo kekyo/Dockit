@@ -59,6 +59,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `values` | Values parameter. |"));
             Assert.That(markdown, Does.Contain("| Transformation result. |"));
             Assert.That(markdown, Does.Contain($"See also: [Name](./{markdownFileName}#name-property)"));
+            Assert.That(markdown, Does.Contain("#### CreateConstrained&lt;TResult&gt;() method"));
+            Assert.That(markdown, Does.Contain("where TResult : BaseType, IMarker, new();"));
             Assert.That(markdown, Does.Contain("#### HandleMatrix() method"));
             Assert.That(markdown, Does.Contain("int[,] matrix"));
 
@@ -74,6 +76,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("public readonly record struct ValueRecord"));
             Assert.That(markdown, Does.Contain("### NativeMethods class"));
             Assert.That(markdown, Does.Contain("public static extern bool MessageBeep("));
+            Assert.That(markdown, Does.Contain("### ConstrainedContainer&lt;TValue&gt; class"));
+            Assert.That(markdown, Does.Contain("where TValue : BaseType, IMarker, new()"));
         });
     }
 
