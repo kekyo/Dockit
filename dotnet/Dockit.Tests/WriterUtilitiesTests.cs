@@ -81,7 +81,27 @@ public sealed class WriterUtilitiesTests
 
         Assert.That(
             rendered,
-            Is.EqualTo($" [op_Implicit](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
+            Is.EqualTo($" [implicit operator string](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
+    }
+
+    [Test]
+    public void RenderReference_resolves_binary_operator_cref_to_local_anchor()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var additionOperator = genericType.Methods.Single(method => method.Name == "op_Addition");
+        var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+
+        var rendered = WriterUtilities.RenderReference(
+            new XElement(
+                "seealso",
+                new XAttribute("cref", $"M:{DotNetXmlNaming.GetDotNetXmlName(additionOperator)}")),
+            identities,
+            "fixture.md");
+
+        Assert.That(
+            rendered,
+            Is.EqualTo($" [operator +](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)]}) "));
     }
 
     [Test]

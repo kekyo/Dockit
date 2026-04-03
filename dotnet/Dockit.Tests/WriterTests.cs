@@ -2,6 +2,7 @@ using Dockit.Internal;
 using NUnit.Framework;
 using System;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,6 +41,11 @@ public sealed class WriterTests
         var result = await RenderMarkdownAsync();
         var markdown = result.Markdown;
         var markdownFileName = result.MarkdownFileName;
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var additionOperator = genericType.Methods.Single(method => method.Name == "op_Addition");
+        var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+        var additionOperatorAnchor = identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)];
 
         Assert.Multiple(() =>
         {
@@ -76,8 +82,12 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Consumes variable arguments."));
             Assert.That(markdown, Does.Contain("    int value,"));
             Assert.That(markdown, Does.Contain("    __arglist);"));
+            Assert.That(markdown, Does.Contain("#### operator +() method"));
+            Assert.That(markdown, Does.Contain("Combines two samples."));
+            Assert.That(markdown, Does.Contain("public static GenericSample<TItem,TValue> operator +("));
 
             Assert.That(markdown, Does.Contain("Converts a sample to a string."));
+            Assert.That(markdown, Does.Contain($"See also: [operator +](./{markdownFileName}#{additionOperatorAnchor})"));
             Assert.That(markdown, Does.Contain("Raises the changed event."));
             Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));

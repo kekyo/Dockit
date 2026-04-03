@@ -50,6 +50,7 @@ public sealed class DotNetXmlNamingTests
         var acceptVarArgsMethod = visibilityType.Methods.Single(method =>
             method.Name == "AcceptVarArgs" &&
             method.CallingConvention == MethodCallingConvention.VarArg);
+        var additionOperatorMethod = genericType.Methods.Single(method => method.Name == "op_Addition");
         var implicitOperatorMethod = genericType.Methods.Single(method => method.Name == "op_Implicit");
         var onChangedMethod = genericType.Methods.Single(method => method.Name == "OnChanged");
         var extensionMethod = extensionType.Methods.Single(method => method.Name == "Extend");
@@ -85,6 +86,9 @@ public sealed class DotNetXmlNamingTests
             Assert.That(
                 DotNetXmlNaming.GetDotNetXmlName(acceptVarArgsMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Consumes variable arguments.")));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(additionOperatorMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Combines two samples.")));
             Assert.That(
                 DotNetXmlNaming.GetDotNetXmlName(implicitOperatorMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Converts a sample to a string.")));

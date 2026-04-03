@@ -243,8 +243,17 @@ namespace Fixture.Root
         {
         }
 
+        /// <summary>Combines two samples.</summary>
+        /// <param name="left">Left sample.</param>
+        /// <param name="right">Right sample.</param>
+        /// <returns>Combined sample.</returns>
+        public static GenericSample<TItem, TValue> operator +(
+            GenericSample<TItem, TValue> left,
+            GenericSample<TItem, TValue> right) => left;
+
         /// <summary>Converts a sample to a string.</summary>
         /// <param name="sample">Sample parameter.</param>
+        /// <seealso cref="operator +(GenericSample{TItem, TValue}, GenericSample{TItem, TValue})" />
         public static implicit operator string(GenericSample<TItem, TValue> sample) => sample.Name;
 
         /// <summary>Raises the changed event.</summary>

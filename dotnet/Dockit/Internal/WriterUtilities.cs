@@ -595,6 +595,165 @@ internal static class WriterUtilities
         }
     }
 
+    private static string[] SplitTopLevelArguments(string text)
+    {
+        var arguments = new List<string>();
+        var braceDepth = 0;
+        var bracketDepth = 0;
+        var startIndex = 0;
+
+        for (var index = 0; index < text.Length; index++)
+        {
+            switch (text[index])
+            {
+                case '{':
+                    braceDepth++;
+                    break;
+
+                case '}':
+                    braceDepth--;
+                    break;
+
+                case '[':
+                    bracketDepth++;
+                    break;
+
+                case ']':
+                    bracketDepth--;
+                    break;
+
+                case ',' when braceDepth == 0 && bracketDepth == 0:
+                    arguments.Add(text.Substring(startIndex, index - startIndex).Trim());
+                    startIndex = index + 1;
+                    break;
+            }
+        }
+
+        var lastArgument = text.Substring(startIndex).Trim();
+        if (lastArgument.Length >= 1)
+        {
+            arguments.Add(lastArgument);
+        }
+
+        return arguments.ToArray();
+    }
+
+    private static string SimplifyXmlDocTypeLabel(string label)
+    {
+        if (label.EndsWith("@"))
+        {
+            return $"ref {SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 1))}";
+        }
+        else if (label.EndsWith("*"))
+        {
+            return $"{SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 1))}*";
+        }
+        else if (label.EndsWith("[]"))
+        {
+            return $"{SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 2))}[]";
+        }
+        else if (label.EndsWith("]"))
+        {
+            var arrayIndex = label.LastIndexOf('[');
+            if (arrayIndex >= 0)
+            {
+                var dimensions = label.Substring(
+                    arrayIndex + 1,
+                    label.Length - arrayIndex - 2);
+                var dimensionParts = dimensions.Split(',');
+                if (dimensionParts.Length >= 1 &&
+                    dimensionParts.All(dimension => dimension == "0:"))
+                {
+                    return $"{SimplifyXmlDocTypeLabel(label.Substring(0, arrayIndex))}[{new string(',', dimensionParts.Length - 1)}]";
+                }
+            }
+        }
+
+        var genericIndex = label.IndexOf('{');
+        if (genericIndex >= 0 &&
+            label.EndsWith("}"))
+        {
+            var typeName = label.Substring(0, genericIndex);
+            var argumentText = label.Substring(genericIndex + 1, label.Length - genericIndex - 2);
+            return $"{SimplifyXmlDocTypeLabel(typeName)}<{string.Join(", ", SplitTopLevelArguments(argumentText).Select(SimplifyXmlDocTypeLabel))}>";
+        }
+
+        if (Naming.CSharpKeywords.TryGetValue(label, out var keyword))
+        {
+            return keyword;
+        }
+
+        if (label.StartsWith("``") ||
+            label.StartsWith("`"))
+        {
+            return label;
+        }
+
+        var lastDotIndex = label.LastIndexOf('.');
+        var simplifiedLabel = lastDotIndex >= 0 ?
+            label.Substring(lastDotIndex + 1) :
+            label;
+
+        var genericArityIndex = simplifiedLabel.IndexOf('`');
+        return genericArityIndex >= 0 ?
+            simplifiedLabel.Substring(0, genericArityIndex) :
+            simplifiedLabel;
+    }
+
+    private static string SimplifyReferenceLabel(string label)
+    {
+        var separatorIndex = label.IndexOf(':');
+        if (separatorIndex >= 0)
+        {
+            label = label.Substring(separatorIndex + 1);
+        }
+
+        string? returnTypeLabel = null;
+        var returnTypeIndex = label.IndexOf('~');
+        if (returnTypeIndex >= 0)
+        {
+            returnTypeLabel = label.Substring(returnTypeIndex + 1);
+            label = label.Substring(0, returnTypeIndex);
+        }
+
+        var parameterIndex = label.IndexOf('(');
+        if (parameterIndex >= 0)
+        {
+            label = label.Substring(0, parameterIndex);
+        }
+
+        var lastDotIndex = label.LastIndexOf('.');
+        if (lastDotIndex >= 0)
+        {
+            label = label.Substring(lastDotIndex + 1);
+        }
+
+        if (Naming.OperatorFormats.TryGetValue(label, out var operatorFormat))
+        {
+            var operatorLabel =
+                operatorFormat.IsRequiredPostFix &&
+                !string.IsNullOrWhiteSpace(returnTypeLabel) ?
+                $"{operatorFormat.Name} {SimplifyXmlDocTypeLabel(returnTypeLabel!)}" :
+                operatorFormat.Name;
+            return EscapeSpecialCharacters(operatorLabel);
+        }
+
+        var genericIndex = label.IndexOf('`');
+        if (genericIndex >= 0)
+        {
+            label = label.Substring(0, genericIndex);
+        }
+
+        label = label switch
+        {
+            "#ctor" => "Constructor",
+            "#cctor" => "Static constructor",
+            _ => label,
+        };
+
+        return EscapeSpecialCharacters(label);
+    }
+
     public static string RenderReference(
         XElement element,
         IReadOnlyDictionary<string, string> hri,
@@ -603,42 +762,6 @@ internal static class WriterUtilities
         var cref = element.Attribute("cref")?.Value?.Trim();
         var identity = EscapeSpecialCharacters(string.Join(" ",
             element.Value.Replace("\r", string.Empty).Split('\n').Select(c => c.Trim())));
-
-        static string SimplifyReferenceLabel(string label)
-        {
-            var separatorIndex = label.IndexOf(':');
-            if (separatorIndex >= 0)
-            {
-                label = label.Substring(separatorIndex + 1);
-            }
-
-            var parameterIndex = label.IndexOf('(');
-            if (parameterIndex >= 0)
-            {
-                label = label.Substring(0, parameterIndex);
-            }
-
-            var lastDotIndex = label.LastIndexOf('.');
-            if (lastDotIndex >= 0)
-            {
-                label = label.Substring(lastDotIndex + 1);
-            }
-
-            var genericIndex = label.IndexOf('`');
-            if (genericIndex >= 0)
-            {
-                label = label.Substring(0, genericIndex);
-            }
-
-            label = label switch
-            {
-                "#ctor" => "Constructor",
-                "#cctor" => "Static constructor",
-                _ => label,
-            };
-
-            return EscapeSpecialCharacters(label);
-        }
 
         static string? NormalizeReferenceKey(string? cref)
         {
