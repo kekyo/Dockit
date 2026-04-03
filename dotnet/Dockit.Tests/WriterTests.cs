@@ -23,6 +23,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `AssemblyVersion` | &quot;1.2.3.4&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyFileVersion` | &quot;4.3.2.1&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyInformationalVersion` | &quot;1.2.3-test+metadata&quot; |"));
+            Assert.That(markdown, Does.Contain("[CLSCompliant(false)]"));
             Assert.That(markdown, Does.Contain($"| [ `Fixture.Root` ](./{markdownFileName}#fixture.root-namespace) |"));
             Assert.That(markdown, Does.Contain($"| [ `Fixture.Secondary` ](./{markdownFileName}#fixture.secondary-namespace) |"));
             Assert.That(markdown, Does.Contain("<a id=\"fixture.root-namespace\"></a>"));

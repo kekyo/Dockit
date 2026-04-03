@@ -815,6 +815,18 @@ internal static class Writer
                 $"| `{Naming.GetName(ca.AttributeType).Replace("Attribute", "")}` | {cas} |");
         }
 
+        var assemblyCustomAttributes = WriterUtilities.GetCustomAttributeDeclarations(assembly);
+        if (assemblyCustomAttributes.Length >= 1)
+        {
+            await tw.WriteLineAsync();
+            await tw.WriteLineAsync("```csharp");
+            foreach (var declaration in assemblyCustomAttributes)
+            {
+                await tw.WriteLineAsync(declaration);
+            }
+            await tw.WriteLineAsync("```");
+        }
+
         /////////////////////////////////////////////////////////
         // Retrieve hash reference identities.
 

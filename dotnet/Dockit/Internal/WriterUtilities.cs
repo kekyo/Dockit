@@ -44,7 +44,7 @@ internal static class WriterUtilities
         }
     }
 
-    private static string[] GetCustomAttributeDeclarations(
+    public static string[] GetCustomAttributeDeclarations(
         ICustomAttributeProvider member) =>
         member.CustomAttributes.Collect(ca =>
         {
