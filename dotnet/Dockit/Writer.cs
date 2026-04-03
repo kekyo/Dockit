@@ -40,6 +40,7 @@ internal static class Writer
         if (anchor is { Length: >= 1 })
         {
             await tw.WriteLineAsync(WriterUtilities.GetAnchorString(anchor));
+            await tw.WriteLineAsync();
         }
         await tw.WriteLineAsync(WriterUtilities.GetSectionString(level, text));
     }

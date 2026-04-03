@@ -36,7 +36,7 @@ const createAnchorHref = (markdownFileName: string, anchor: string): string =>
   `./${markdownFileName}#${anchor}`;
 
 const createAnchorElement = (anchor: string): string =>
-  `<a id="${anchor}"></a>`;
+  `<a name="${anchor}"></a>`;
 
 const getModuleAnchorTitle = (
   moduleDocumentation: ModuleDocumentation
@@ -191,6 +191,7 @@ const renderAnchoredSection = (
   anchor: string
 ): void => {
   lines.push(createAnchorElement(anchor));
+  lines.push('');
   lines.push(createSection(level, title));
 };
 

@@ -37,7 +37,7 @@ internal static class WriterUtilities
         $"{new string('#', level)} {text}";
 
     public static string GetAnchorString(string anchor) =>
-        $"<a id=\"{EscapeSpecialCharacters(anchor)}\"></a>";
+        $"<a name=\"{EscapeSpecialCharacters(anchor)}\"></a>";
 
     public static string GetAnchorHref(string markdownFileName, string anchor) =>
         $"./{EscapeSpecialCharacters(markdownFileName)}#{EscapeSpecialCharacters(anchor)}";

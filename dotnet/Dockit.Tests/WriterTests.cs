@@ -26,7 +26,11 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("[CLSCompliant(false)]"));
             Assert.That(markdown, Does.Contain($"| [ `Fixture.Root` ](./{markdownFileName}#fixture.root-namespace) |"));
             Assert.That(markdown, Does.Contain($"| [ `Fixture.Secondary` ](./{markdownFileName}#fixture.secondary-namespace) |"));
-            Assert.That(markdown, Does.Contain("<a id=\"fixture.root-namespace\"></a>"));
+            Assert.That(markdown, Does.Not.Contain("<a id=\""));
+            Assert.That(
+                markdown,
+                Does.Contain(
+                    $"<a name=\"fixture.root-namespace\"></a>{Environment.NewLine}{Environment.NewLine}## Fixture.Root namespace"));
         });
     }
 
@@ -40,7 +44,10 @@ public sealed class WriterTests
         Assert.Multiple(() =>
         {
             Assert.That(markdown, Does.Contain("### GenericSample&lt;TItem,TValue&gt; class"));
-            Assert.That(markdown, Does.Contain("<a id=\"genericsampletitemtvalue-class\"></a>"));
+            Assert.That(
+                markdown,
+                Does.Contain(
+                    $"<a name=\"genericsampletitemtvalue-class\"></a>{Environment.NewLine}{Environment.NewLine}### GenericSample&lt;TItem,TValue&gt; class"));
             Assert.That(markdown, Does.Contain("Represents a generic sample type."));
             Assert.That(markdown, Does.Contain("| `TItem` | Primary item type. |"));
             Assert.That(markdown, Does.Contain("| `TValue` | Secondary value type. |"));
