@@ -68,6 +68,10 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Extends a sample."));
             Assert.That(markdown, Does.Contain("### BufferSlice ref struct"));
             Assert.That(markdown, Does.Contain("public readonly ref struct BufferSlice"));
+            Assert.That(markdown, Does.Contain("### NameRecord record"));
+            Assert.That(markdown, Does.Contain("public record NameRecord"));
+            Assert.That(markdown, Does.Contain("### ValueRecord record struct"));
+            Assert.That(markdown, Does.Contain("public readonly record struct ValueRecord"));
         });
     }
 

@@ -170,6 +170,51 @@ internal static class CecilUtilities
         type.Resolve().CustomAttributes.Any(ca =>
             ca.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute");
 
+    public static bool IsRecordClassType(TypeReference type)
+    {
+        if (type.IsValueType)
+        {
+            return false;
+        }
+
+        var resolvedType = type.Resolve();
+        return resolvedType.Methods.Any(method => method.Name == "<Clone>$") ||
+            resolvedType.Properties.Any(property =>
+                property.Name == "EqualityContract" &&
+                property.PropertyType.FullName == "System.Type");
+    }
+
+    public static bool IsRecordStructType(TypeReference type)
+    {
+        if (!type.IsValueType)
+        {
+            return false;
+        }
+
+        var resolvedType = type.Resolve();
+        return !resolvedType.IsEnum &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "PrintMembers" &&
+                method.Parameters.Count == 1 &&
+                method.Parameters[0].ParameterType.FullName == "System.Text.StringBuilder" &&
+                method.ReturnType.FullName == "System.Boolean") &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "Equals" &&
+                method.Parameters.Count == 1 &&
+                method.ReturnType.FullName == "System.Boolean" &&
+                method.Parameters[0].ParameterType.FullName == resolvedType.FullName) &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "GetHashCode" &&
+                method.Parameters.Count == 0 &&
+                method.ReturnType.FullName == "System.Int32") &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "ToString" &&
+                method.Parameters.Count == 0 &&
+                method.ReturnType.FullName == "System.String") &&
+            resolvedType.Methods.Any(method => method.Name == "op_Equality") &&
+            resolvedType.Methods.Any(method => method.Name == "op_Inequality");
+    }
+
     public static string GetTypeKeywordString(TypeReference type)
     {
         if (type.IsByReference)
@@ -185,6 +230,10 @@ internal static class CecilUtilities
             if (IsEnumType(type))
             {
                 return "enum";
+            }
+            else if (IsRecordStructType(type))
+            {
+                return "record struct";
             }
             else if (IsRefStructType(type))
             {
@@ -205,6 +254,10 @@ internal static class CecilUtilities
         else if (t.BaseType?.FullName == "System.MulticastDelegate")
         {
             return "delegate";
+        }
+        else if (IsRecordClassType(type))
+        {
+            return "record";
         }
         else if (t.IsClass)
         {

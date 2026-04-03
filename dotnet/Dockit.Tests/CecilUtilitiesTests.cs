@@ -39,6 +39,8 @@ public sealed class CecilUtilitiesTests
         var delegateType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "Transformer`2");
         var enumType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "SampleState");
         var refStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "BufferSlice");
+        var recordClassType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "NameRecord");
+        var recordStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "ValueRecord");
         var extensionType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSampleExtensions");
 
         var indexer = genericType.Properties.Single(property => property.Name == "Item");
@@ -51,8 +53,12 @@ public sealed class CecilUtilitiesTests
             Assert.That(CecilUtilities.IsDelegateType(delegateType), Is.True);
             Assert.That(CecilUtilities.IsEnumType(enumType), Is.True);
             Assert.That(CecilUtilities.IsRefStructType(refStructType), Is.True);
+            Assert.That(CecilUtilities.IsRecordClassType(recordClassType), Is.True);
+            Assert.That(CecilUtilities.IsRecordStructType(recordStructType), Is.True);
             Assert.That(CecilUtilities.IsExtensionMethod(extensionMethod), Is.True);
             Assert.That(CecilUtilities.GetTypeKeywordString(refStructType), Is.EqualTo("ref struct"));
+            Assert.That(CecilUtilities.GetTypeKeywordString(recordClassType), Is.EqualTo("record"));
+            Assert.That(CecilUtilities.GetTypeKeywordString(recordStructType), Is.EqualTo("record struct"));
 
             Assert.That(referenceMethod.Parameters[0].Name, Is.EqualTo("item"));
             Assert.That(CecilUtilities.GetParameterModifier(referenceMethod.Parameters[0]), Is.EqualTo(ParameterModifierCandidates.In));

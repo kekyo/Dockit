@@ -46,6 +46,12 @@ namespace Fixture.Root
             Length = length;
     }
 
+    /// <summary>Represents a nominal record.</summary>
+    public record NameRecord(string Name);
+
+    /// <summary>Represents a value record.</summary>
+    public readonly record struct ValueRecord(int Value);
+
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>
     public class Outer<TOuter>
