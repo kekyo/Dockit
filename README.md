@@ -69,7 +69,6 @@ Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
-- `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
 
 Before you run it, make sure that:
 
@@ -93,6 +92,15 @@ dockit-dotnet ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
 ```
 
 This writes `./docs/api/MyLibrary.md`.
+
+Successful runs print the resolved input and output paths:
+
+```text
+Input assembly: /absolute/path/to/MyLibrary.dll
+Input XML: /absolute/path/to/MyLibrary.xml
+Output markdown: /absolute/path/to/docs/api/MyLibrary.md
+Elapsed time: 123.456 ms
+```
 
 Generate documentation after a normal build:
 
@@ -120,6 +128,7 @@ Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+- `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
 
 Before you run it, make sure that:
 
@@ -155,6 +164,14 @@ dockit-ts ./path/to/package ./docs/api
 ```
 
 This writes `./docs/api/<package-name>.md`.
+
+Successful runs print the resolved input and output paths:
+
+```text
+Input project: /absolute/path/to/package
+Output markdown: /absolute/path/to/docs/api/<package-name>.md
+Elapsed time: 123.456 ms
+```
 
 Generate Markdown from a CLI-style package that keeps source files under `src`:
 

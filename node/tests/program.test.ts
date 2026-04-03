@@ -7,7 +7,7 @@
 //
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { run } from '../src/program.js';
 import {
@@ -69,7 +69,13 @@ describe('run', () => {
       );
 
       expect(exitCode).toBe(0);
-      expect(outputWriter.read()).toBe('');
+      expect(outputWriter.read()).toContain(
+        `Input project: ${resolve(fixturePath('ts-project'))}`
+      );
+      expect(outputWriter.read()).toContain(
+        `Output markdown: ${join(outputDirectory, 'dockit-ts-fixture.md')}`
+      );
+      expect(outputWriter.read()).toMatch(/Elapsed time: \d+\.\d{3} ms/);
       expect(errorWriter.read()).toBe('');
       expect(markdown).toContain('## dockit-ts-fixture package');
     });
@@ -115,6 +121,13 @@ describe('run', () => {
       );
 
       expect(exitCode).toBe(0);
+      expect(outputWriter.read()).toContain(
+        `Input project: ${resolve(fixturePath('cli-project'))}`
+      );
+      expect(outputWriter.read()).toContain(
+        `Output markdown: ${join(outputDirectory, 'dockit-cli-fixture.md')}`
+      );
+      expect(outputWriter.read()).toMatch(/Elapsed time: \d+\.\d{3} ms/);
       expect(errorWriter.read()).toBe('');
       expect(markdown).toContain('# dockit-cli-fixture package');
       expect(markdown).toContain('### CliSurface interface');
@@ -132,7 +145,7 @@ describe('run', () => {
     );
 
     expect(exitCode).toBe(1);
-    expect(outputWriter.read()).toBe('');
+    expect(outputWriter.read()).toMatch(/^Dockit \[typescript\] \[[^\]]+\]\n$/);
     expect(errorWriter.read()).toContain(
       'No supported source entry points were found.'
     );

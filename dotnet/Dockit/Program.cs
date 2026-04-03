@@ -11,6 +11,7 @@ using Dockit.Internal;
 using Mono.Options;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -41,15 +42,18 @@ public static class Program
             return 0;
         }
 
-        var assemblyPath = commandLine.AssemblyPath!;
-        var markdownBasePath = commandLine.MarkdownBasePath!;
+        var stopwatch = Stopwatch.StartNew();
+
+        await outputWriter.WriteLineAsync(
+            $"Dockit [{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyVersion}-{ThisAssembly.AssemblyMetadata.CommitId}]");
+
+        var assemblyPath = Path.GetFullPath(commandLine.AssemblyPath!);
+        var markdownBasePath = Path.GetFullPath(commandLine.MarkdownBasePath!);
         var initialLevel = commandLine.InitialLevel;
 
         var referenceBasePath = Path.GetDirectoryName(assemblyPath)!;
 
-        var dotNetXmlPath = Path.Combine(
-            Path.GetDirectoryName(assemblyPath)!,
-            Path.GetFileNameWithoutExtension(assemblyPath) + ".xml");
+        var dotNetXmlPath = Path.ChangeExtension(assemblyPath, ".xml");
         var markdownPath = Path.Combine(
             markdownBasePath,
             Path.GetFileNameWithoutExtension(assemblyPath) + ".md");
@@ -71,8 +75,17 @@ public static class Program
             markdownPath, assembly, dotNetDocument, initialLevel,
             default);
 
+        await outputWriter.WriteLineAsync($"Converted .NET --> Markdown");
+        await outputWriter.WriteLineAsync($"Input assembly: {assemblyPath}");
+        await outputWriter.WriteLineAsync($"Input XML: {dotNetXmlPath}");
+        await outputWriter.WriteLineAsync($"Output markdown: {markdownPath}");
+        await outputWriter.WriteLineAsync($"Elapsed time: {FormatElapsedTime(stopwatch.Elapsed)}");
+
         return 0;
     }
+
+    private static string FormatElapsedTime(TimeSpan elapsed) =>
+        $"{elapsed.TotalMilliseconds:0.000} ms";
 
     private static ParsedCommandLine ParseArguments(string[] args)
     {

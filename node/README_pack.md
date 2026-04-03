@@ -52,6 +52,7 @@ Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+- `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
 
 Generate Markdown from an npm package:
 
@@ -60,6 +61,14 @@ dockit-ts ./path/to/package ./docs/api
 ```
 
 This writes `./docs/api/<package-name>.md`.
+
+Successful runs print the resolved input and output paths:
+
+```text
+Input project: /absolute/path/to/package
+Output markdown: /absolute/path/to/docs/api/<package-name>.md
+Elapsed time: 123.456 ms
+```
 
 Generate Markdown from a CLI-style package that keeps source files under `src`:
 

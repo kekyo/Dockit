@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 import { mkdir } from 'node:fs/promises';
+import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 import { analyzeProject } from './internal/analyzer.js';
 import {
@@ -146,6 +147,9 @@ const writeUsage = (writer: NodeJS.WritableStream): void => {
   );
 };
 
+const formatElapsedTime = (elapsedMilliseconds: number): string =>
+  `${elapsedMilliseconds.toFixed(3)} ms`;
+
 /**
  * Runs the dockit-ts command line interface.
  */
@@ -166,13 +170,14 @@ export const run = async (
     return 0;
   }
 
+  const startedAt = performance.now();
+  outputWriter.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
+
   try {
-    const packageDocumentation = await analyzeProject(
-      commandLine.projectPath!,
-      {
-        entryPaths: commandLine.entryPaths,
-      }
-    );
+    const projectPath = resolve(commandLine.projectPath!);
+    const packageDocumentation = await analyzeProject(projectPath, {
+      entryPaths: commandLine.entryPaths,
+    });
     const outputDirectory = resolve(commandLine.outputDirectory!);
     const markdownPath = getMarkdownOutputPath(
       outputDirectory,
@@ -184,6 +189,13 @@ export const run = async (
       markdownPath,
       packageDocumentation,
       commandLine.initialLevel
+    );
+
+    outputWriter.write('Converted TypeScript --> Markdown\n');
+    outputWriter.write(`Input project: ${projectPath}\n`);
+    outputWriter.write(`Output markdown: ${markdownPath}\n`);
+    outputWriter.write(
+      `Elapsed time: ${formatElapsedTime(performance.now() - startedAt)}\n`
     );
 
     return 0;
