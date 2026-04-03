@@ -104,7 +104,7 @@ internal static class Writer
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, field, 0, ct);
         await tw.WriteLineAsync(
-            $"{CecilUtilities.GetModifierKeywordString(field)} {Naming.GetName(field.FieldType)} {Naming.GetName(field)};");
+            $"{CecilUtilities.GetModifierKeywordString(field)} {NullableReferenceTypes.GetName(field.FieldType, NullableReferenceTypes.CreateFieldContext(field))} {Naming.GetName(field)};");
         await tw.WriteLineAsync("```");
 
         await WriteRemarksAsync(tw, dotNetXmlField, hri, markdownFileName, ct);
@@ -145,7 +145,7 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, property, 0, ct);
-        await tw.WriteLineAsync($"{Naming.GetName(property.PropertyType)} {Naming.GetName(property, true)}");
+        await tw.WriteLineAsync($"{NullableReferenceTypes.GetName(property.PropertyType, NullableReferenceTypes.CreatePropertyContext(property))} {Naming.GetName(property, true)}");
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetGetter(property) is { } gm)
         {
@@ -200,7 +200,7 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, @event, 0, ct);
-        await tw.WriteLineAsync($"event {Naming.GetName(@event.EventType)} {Naming.GetName(@event)}");
+        await tw.WriteLineAsync($"event {NullableReferenceTypes.GetName(@event.EventType, NullableReferenceTypes.CreateEventContext(@event))} {Naming.GetName(@event)}");
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetAdd(@event) is { } am)
         {

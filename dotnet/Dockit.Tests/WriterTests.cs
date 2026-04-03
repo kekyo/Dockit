@@ -68,6 +68,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Raises the changed event."));
             Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));
+            Assert.That(markdown, Does.Contain("event EventHandler? Changed"));
             Assert.That(markdown, Does.Contain("### BufferSlice ref struct"));
             Assert.That(markdown, Does.Contain("public readonly ref struct BufferSlice"));
             Assert.That(markdown, Does.Contain("### NameRecord record"));
@@ -78,6 +79,11 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("public static extern bool MessageBeep("));
             Assert.That(markdown, Does.Contain("### ConstrainedContainer&lt;TValue&gt; class"));
             Assert.That(markdown, Does.Contain("where TValue : BaseType, IMarker, new()"));
+            Assert.That(markdown, Does.Contain("### NullableContainer class"));
+            Assert.That(markdown, Does.Contain("string? OptionalName"));
+            Assert.That(markdown, Does.Contain("Dictionary<string,string?>? CreateNullableMap("));
+            Assert.That(markdown, Does.Contain("string? prefix"));
+            Assert.That(markdown, Does.Contain("List<string?>? values"));
         });
     }
 

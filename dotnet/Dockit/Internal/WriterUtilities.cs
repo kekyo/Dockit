@@ -194,8 +194,10 @@ internal static class WriterUtilities
 
                 var preSignature = CecilUtilities.IsParamArray(parameter) ? "params " :
                     CecilUtilities.GetMethodParameterPreSignature(method, parameter.Index);
-                var typeName = Naming.GetName(
-                    parameter.ParameterType, CecilUtilities.GetParameterModifier(parameter));
+                var typeName = NullableReferenceTypes.GetName(
+                    parameter.ParameterType,
+                    NullableReferenceTypes.CreateParameterContext(method.Resolve(), parameter),
+                    CecilUtilities.GetParameterModifier(parameter));
                 var parameterName = Naming.GetName(parameter);
                 var defaultValue = parameter.HasConstant ?
                     $" = {GetPrettyPrintValue(parameter.Constant, parameter.ParameterType)}" : "";
@@ -229,8 +231,17 @@ internal static class WriterUtilities
         }
         else
         {
+            var returnTypeName = NullableReferenceTypes.GetName(
+                m.ReturnType,
+                NullableReferenceTypes.CreateMethodReturnContext(m));
+            var methodName =
+                Naming.OperatorFormats.TryGetValue(m.Name, out var operatorFormat) ?
+                operatorFormat.IsRequiredPostFix ?
+                    $"{operatorFormat.Name} {returnTypeName}(" :
+                    $"{returnTypeName} {operatorFormat.Name}(" :
+                $"{returnTypeName} {Naming.GetName(m, MethodForms.WithPreBrace)}";
             await tw.WriteAsync(
-                $"{CecilUtilities.GetModifierKeywordString(m)} {Naming.GetName(m, MethodForms.WithPreBrace | MethodForms.WithReturnType)}");
+                $"{CecilUtilities.GetModifierKeywordString(m)} {methodName}");
         }
 
         await WriteSignatureParameterListAsync(tw, m, ct);
@@ -244,7 +255,7 @@ internal static class WriterUtilities
 
         await WriteCustomAttributesAsync(tw, delegateType, 0, ct);
         await tw.WriteAsync(
-            $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {Naming.GetName(m.ReturnType)} {Naming.GetName(delegateType)}(");
+            $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {NullableReferenceTypes.GetName(m.ReturnType, NullableReferenceTypes.CreateMethodReturnContext(m))} {Naming.GetName(delegateType)}(");
         await WriteSignatureParameterListAsync(tw, m, ct);
         await WriteGenericConstraintClausesAsync(tw, delegateType, 4, ";", ct);
     }

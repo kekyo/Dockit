@@ -70,6 +70,22 @@ namespace Fixture.Root
     {
     }
 
+    /// <summary>Contains nullable reference type members.</summary>
+    public class NullableContainer
+    {
+        /// <summary>Gets or sets the optional name.</summary>
+        public string? OptionalName { get; set; }
+
+        /// <summary>Creates a nullable map.</summary>
+        /// <param name="prefix">Optional prefix.</param>
+        /// <param name="values">Optional values.</param>
+        /// <returns>Optional map.</returns>
+        public Dictionary<string, string?>? CreateNullableMap(
+            string? prefix,
+            List<string?>? values) =>
+            null;
+    }
+
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>
     public class Outer<TOuter>
