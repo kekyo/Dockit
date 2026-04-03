@@ -95,6 +95,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Dictionary<string,string?>? CreateNullableMap("));
             Assert.That(markdown, Does.Contain("string? prefix"));
             Assert.That(markdown, Does.Contain("List<string?>? values"));
+            Assert.That(markdown, Does.Contain("[return: MaybeNull]"));
+            Assert.That(markdown, Does.Contain("string ReturnMaybeNull("));
         });
     }
 

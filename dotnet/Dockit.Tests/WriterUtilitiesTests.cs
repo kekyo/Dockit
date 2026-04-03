@@ -121,4 +121,12 @@ public sealed class WriterUtilitiesTests
                 Is.EqualTo(new[] { "where TResult : BaseType, IMarker, new()" }));
         });
     }
+
+    [Test]
+    public void GetCustomAttributeDeclarationWithTarget_inserts_return_target()
+    {
+        Assert.That(
+            WriterUtilities.GetCustomAttributeDeclarationWithTarget("[MaybeNull]", "return"),
+            Is.EqualTo("[return: MaybeNull]"));
+    }
 }

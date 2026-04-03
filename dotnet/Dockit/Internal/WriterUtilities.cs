@@ -106,12 +106,35 @@ internal static class WriterUtilities
         ICustomAttributeProvider member) =>
         GetCustomAttributeDeclarations(member).Length >= 1;
 
+    public static string GetCustomAttributeDeclarationWithTarget(
+        string declaration,
+        string target) =>
+        declaration.StartsWith("[") ?
+            $"[{target}: {declaration.Substring(1)}" :
+            declaration;
+
     public static async Task WriteCustomAttributesAsync(
         TextWriter tw, ICustomAttributeProvider member, int indent, CancellationToken ct)
     {
         var indentString = new string(' ', indent);
         foreach (var declaration in
             GetCustomAttributeDeclarations(member))
+        {
+            await tw.WriteLineAsync(indentString + declaration);
+        }
+    }
+
+    public static async Task WriteCustomAttributesAsync(
+        TextWriter tw,
+        ICustomAttributeProvider member,
+        int indent,
+        string target,
+        CancellationToken ct)
+    {
+        var indentString = new string(' ', indent);
+        foreach (var declaration in
+            GetCustomAttributeDeclarations(member).
+            Select(declaration => GetCustomAttributeDeclarationWithTarget(declaration, target)))
         {
             await tw.WriteLineAsync(indentString + declaration);
         }
@@ -228,6 +251,7 @@ internal static class WriterUtilities
     {
         var m = method.Resolve();
         await WriteCustomAttributesAsync(tw, m, 0, ct);
+        await WriteCustomAttributesAsync(tw, m.MethodReturnType, 0, "return", ct);
 
         if (m.IsConstructor)
         {
@@ -259,6 +283,7 @@ internal static class WriterUtilities
         var m = delegateType.Methods.First(m => m.Name.StartsWith("Invoke"));
 
         await WriteCustomAttributesAsync(tw, delegateType, 0, ct);
+        await WriteCustomAttributesAsync(tw, m.MethodReturnType, 0, "return", ct);
         await tw.WriteAsync(
             $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {NullableReferenceTypes.GetName(m.ReturnType, NullableReferenceTypes.CreateMethodReturnContext(m))} {Naming.GetName(delegateType)}(");
         await WriteSignatureParameterListAsync(tw, m, ct);

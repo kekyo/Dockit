@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -84,6 +85,13 @@ namespace Fixture.Root
             string? prefix,
             List<string?>? values) =>
             null;
+
+        /// <summary>Returns text with a nullable contract.</summary>
+        /// <param name="value">Input value.</param>
+        /// <returns>Returned value.</returns>
+        [return: MaybeNull]
+        public string ReturnMaybeNull(string value) =>
+            value;
     }
 
     /// <summary>Represents an outer generic type.</summary>
