@@ -26,7 +26,7 @@ public sealed class CecilUtilitiesTests
             Assert.That(fieldNames, Is.EquivalentTo(new[] { "ProtectedField", "VisibleField" }));
             Assert.That(propertyNames, Is.EquivalentTo(new[] { "ProtectedProperty", "VisibleProperty" }));
             Assert.That(eventNames, Is.EquivalentTo(new[] { "VisibleEvent" }));
-            Assert.That(methodNames, Is.EquivalentTo(new[] { "OnVisibleEvent", "ProtectedMethod", "VisibleMethod" }));
+            Assert.That(methodNames, Is.EquivalentTo(new[] { "AcceptVarArgs", "AcceptVarArgs", "OnVisibleEvent", "ProtectedMethod", "VisibleMethod" }));
         });
     }
 
@@ -38,10 +38,17 @@ public sealed class CecilUtilitiesTests
         var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
         var delegateType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "Transformer`2");
         var enumType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "SampleState");
+        var refStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "BufferSlice");
+        var recordClassType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "NameRecord");
+        var recordStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "ValueRecord");
+        var nativeMethodsType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "NativeMethods");
         var extensionType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSampleExtensions");
 
         var indexer = genericType.Properties.Single(property => property.Name == "Item");
+        var nameProperty = genericType.Properties.Single(property => property.Name == "Name");
+        var changedEvent = genericType.Events.Single(@event => @event.Name == "Changed");
         var extensionMethod = extensionType.Methods.Single(method => method.Name == "Extend");
+        var externMethod = nativeMethodsType.Methods.Single(method => method.Name == "MessageBeep");
         var referenceMethod = genericType.Methods.Single(method => method.Name == "ConsumeReferences");
 
         Assert.Multiple(() =>
@@ -49,7 +56,16 @@ public sealed class CecilUtilitiesTests
             Assert.That(CecilUtilities.IsIndexer(indexer), Is.True);
             Assert.That(CecilUtilities.IsDelegateType(delegateType), Is.True);
             Assert.That(CecilUtilities.IsEnumType(enumType), Is.True);
+            Assert.That(CecilUtilities.IsRefStructType(refStructType), Is.True);
+            Assert.That(CecilUtilities.IsRecordClassType(recordClassType), Is.True);
+            Assert.That(CecilUtilities.IsRecordStructType(recordStructType), Is.True);
             Assert.That(CecilUtilities.IsExtensionMethod(extensionMethod), Is.True);
+            Assert.That(CecilUtilities.GetTypeKeywordString(refStructType), Is.EqualTo("ref struct"));
+            Assert.That(CecilUtilities.GetTypeKeywordString(recordClassType), Is.EqualTo("record"));
+            Assert.That(CecilUtilities.GetTypeKeywordString(recordStructType), Is.EqualTo("record struct"));
+            Assert.That(CecilUtilities.GetModifierKeywordString(externMethod), Is.EqualTo("public static extern"));
+            Assert.That(CecilUtilities.GetAggregatedPropertyModifierKeywordString(nameProperty), Is.EqualTo("public"));
+            Assert.That(CecilUtilities.GetAggregatedEventModifierKeywordString(changedEvent), Is.EqualTo("public"));
 
             Assert.That(referenceMethod.Parameters[0].Name, Is.EqualTo("item"));
             Assert.That(CecilUtilities.GetParameterModifier(referenceMethod.Parameters[0]), Is.EqualTo(ParameterModifierCandidates.In));

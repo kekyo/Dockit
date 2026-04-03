@@ -23,11 +23,21 @@ namespace Dockit.Internal;
 
 internal static class WriterUtilities
 {
+    private const int unmanagedMethodImplFlag = 0x0004;
+    private const int noInliningMethodImplFlag = 0x0008;
+    private const int forwardRefMethodImplFlag = 0x0010;
+    private const int synchronizedMethodImplFlag = 0x0020;
+    private const int noOptimizationMethodImplFlag = 0x0040;
+    private const int preserveSigMethodImplFlag = 0x0080;
+    private const int aggressiveInliningMethodImplFlag = 0x0100;
+    private const int aggressiveOptimizationMethodImplFlag = 0x0200;
+    private const int internalCallMethodImplFlag = 0x1000;
+
     public static string GetSectionString(int level, string text) =>
         $"{new string('#', level)} {text}";
 
     public static string GetAnchorString(string anchor) =>
-        $"<a id=\"{EscapeSpecialCharacters(anchor)}\"></a>";
+        $"<a name=\"{EscapeSpecialCharacters(anchor)}\"></a>";
 
     public static string GetAnchorHref(string markdownFileName, string anchor) =>
         $"./{EscapeSpecialCharacters(markdownFileName)}#{EscapeSpecialCharacters(anchor)}";
@@ -44,7 +54,7 @@ internal static class WriterUtilities
         }
     }
 
-    private static string[] GetCustomAttributeDeclarations(
+    public static string[] GetCustomAttributeDeclarations(
         ICustomAttributeProvider member) =>
         member.CustomAttributes.Collect(ca =>
         {
@@ -60,6 +70,8 @@ internal static class WriterUtilities
                 // Hides these attributes.
                 case "System.ParamArrayAttribute":
                 case "System.Runtime.CompilerServices.ExtensionAttribute":
+                case "System.Runtime.CompilerServices.CompilerGeneratedAttribute":
+                case "System.Runtime.CompilerServices.IsByRefLikeAttribute":
                 case "System.Runtime.CompilerServices.IsReadOnlyAttribute":
                 case "System.Runtime.CompilerServices.AsyncStateMachineAttribute":
                 case "System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute":
@@ -98,7 +110,57 @@ internal static class WriterUtilities
 
             return $"[{name}{(arguments.Length >= 1 ? $"({arguments})" : "")}]";
         }).
+        Concat(GetSyntheticCustomAttributeDeclarations(member)).
+        Distinct().
         ToArray();
+
+    private static string[] GetSyntheticCustomAttributeDeclarations(
+        ICustomAttributeProvider member)
+    {
+        if (member is not MethodDefinition method)
+        {
+            return Utilities.Empty<string>();
+        }
+
+        var optionNames = new List<string>();
+        var implAttributes = (int)method.ImplAttributes;
+
+        static void AddIfPresent(List<string> optionNames, int implAttributes, int flag, string name)
+        {
+            if ((implAttributes & flag) == flag)
+            {
+                optionNames.Add(name);
+            }
+        }
+
+        AddIfPresent(optionNames, implAttributes, unmanagedMethodImplFlag, "Unmanaged");
+        AddIfPresent(optionNames, implAttributes, noInliningMethodImplFlag, "NoInlining");
+        AddIfPresent(optionNames, implAttributes, forwardRefMethodImplFlag, "ForwardRef");
+        AddIfPresent(optionNames, implAttributes, synchronizedMethodImplFlag, "Synchronized");
+        AddIfPresent(optionNames, implAttributes, noOptimizationMethodImplFlag, "NoOptimization");
+        if (!method.IsPInvokeImpl)
+        {
+            AddIfPresent(optionNames, implAttributes, preserveSigMethodImplFlag, "PreserveSig");
+        }
+        AddIfPresent(optionNames, implAttributes, aggressiveInliningMethodImplFlag, "AggressiveInlining");
+        AddIfPresent(optionNames, implAttributes, aggressiveOptimizationMethodImplFlag, "AggressiveOptimization");
+        AddIfPresent(optionNames, implAttributes, internalCallMethodImplFlag, "InternalCall");
+
+        return optionNames.Count >= 1 ?
+            new[] { $"[MethodImpl({string.Join(" | ", optionNames.Select(optionName => $"MethodImplOptions.{optionName}"))})]" } :
+            Utilities.Empty<string>();
+    }
+
+    public static bool HasVisibleCustomAttributes(
+        ICustomAttributeProvider member) =>
+        GetCustomAttributeDeclarations(member).Length >= 1;
+
+    public static string GetCustomAttributeDeclarationWithTarget(
+        string declaration,
+        string target) =>
+        declaration.StartsWith("[") ?
+            $"[{target}: {declaration.Substring(1)}" :
+            declaration;
 
     public static async Task WriteCustomAttributesAsync(
         TextWriter tw, ICustomAttributeProvider member, int indent, CancellationToken ct)
@@ -111,12 +173,95 @@ internal static class WriterUtilities
         }
     }
 
-    private static async Task WriteSignatureBodyAsync(
+    public static async Task WriteCustomAttributesAsync(
+        TextWriter tw,
+        ICustomAttributeProvider member,
+        int indent,
+        string target,
+        CancellationToken ct)
+    {
+        var indentString = new string(' ', indent);
+        foreach (var declaration in
+            GetCustomAttributeDeclarations(member).
+            Select(declaration => GetCustomAttributeDeclarationWithTarget(declaration, target)))
+        {
+            await tw.WriteLineAsync(indentString + declaration);
+        }
+    }
+
+    public static string[] GetGenericConstraintClauses(
+        IGenericParameterProvider provider) =>
+        provider.GenericParameters.
+        Select(genericParameter =>
+        {
+            var constraints = new List<string>();
+
+            if (genericParameter.HasNotNullableValueTypeConstraint)
+            {
+                constraints.Add("struct");
+            }
+            else if (genericParameter.HasReferenceTypeConstraint)
+            {
+                constraints.Add("class");
+            }
+
+            constraints.AddRange(genericParameter.Constraints.
+                Select(constraint => Naming.GetName(constraint.ConstraintType)).
+                Where(constraint => constraint != "ValueType"));
+
+            if (genericParameter.HasDefaultConstructorConstraint &&
+                !genericParameter.HasNotNullableValueTypeConstraint)
+            {
+                constraints.Add("new()");
+            }
+
+            return constraints.Count >= 1 ?
+                $"where {genericParameter.Name} : {string.Join(", ", constraints)}" :
+                null;
+        }).
+        Where(clause => clause is not null).
+        Cast<string>().
+        ToArray();
+
+    public static async Task WriteGenericConstraintClausesAsync(
+        TextWriter tw,
+        IGenericParameterProvider provider,
+        int indent,
+        string terminator,
+        CancellationToken ct)
+    {
+        var clauses = GetGenericConstraintClauses(provider);
+        if (clauses.Length == 0)
+        {
+            await tw.WriteLineAsync(terminator);
+            return;
+        }
+
+        await tw.WriteLineAsync();
+
+        var indentString = new string(' ', indent);
+        for (var index = 0; index < clauses.Length; index++)
+        {
+            var clause = clauses[index];
+            if (index < clauses.Length - 1)
+            {
+                await tw.WriteLineAsync(indentString + clause);
+            }
+            else
+            {
+                await tw.WriteLineAsync(indentString + clause + terminator);
+            }
+        }
+    }
+
+    private static async Task WriteSignatureParameterListAsync(
         TextWriter tw, MethodReference method, CancellationToken ct)
     {
+        var hasVarArg = CecilUtilities.IsVarArgMethod(method);
+
         if (method.Parameters.Count == 0)
         {
-            await tw.WriteLineAsync(");");
+            await tw.WriteAsync(hasVarArg ? "__arglist)" : ")");
         }
         else
         {
@@ -128,24 +273,31 @@ internal static class WriterUtilities
 
                 var preSignature = CecilUtilities.IsParamArray(parameter) ? "params " :
                     CecilUtilities.GetMethodParameterPreSignature(method, parameter.Index);
-                var typeName = Naming.GetName(
-                    parameter.ParameterType, CecilUtilities.GetParameterModifier(parameter));
+                var typeName = NullableReferenceTypes.GetName(
+                    parameter.ParameterType,
+                    NullableReferenceTypes.CreateParameterContext(method.Resolve(), parameter),
+                    CecilUtilities.GetParameterModifier(parameter));
                 var parameterName = Naming.GetName(parameter);
                 var defaultValue = parameter.HasConstant ?
                     $" = {GetPrettyPrintValue(parameter.Constant, parameter.ParameterType)}" : "";
 
                 await WriteCustomAttributesAsync(tw, parameter, 4, ct);
 
-                if (index < method.Parameters.Count - 1)
+                if (index < method.Parameters.Count - 1 || hasVarArg)
                 {
                     await tw.WriteLineAsync(
                         $"    {preSignature}{typeName} {parameterName}{defaultValue},");
                 }
                 else
                 {
-                    await tw.WriteLineAsync(
-                        $"    {preSignature}{typeName} {parameterName}{defaultValue});");
+                    await tw.WriteAsync(
+                        $"    {preSignature}{typeName} {parameterName}{defaultValue})");
                 }
+            }
+
+            if (hasVarArg)
+            {
+                await tw.WriteAsync("    __arglist)");
             }
         }
     }
@@ -155,6 +307,7 @@ internal static class WriterUtilities
     {
         var m = method.Resolve();
         await WriteCustomAttributesAsync(tw, m, 0, ct);
+        await WriteCustomAttributesAsync(tw, m.MethodReturnType, 0, "return", ct);
 
         if (m.IsConstructor)
         {
@@ -163,11 +316,21 @@ internal static class WriterUtilities
         }
         else
         {
+            var returnTypeName = NullableReferenceTypes.GetName(
+                m.ReturnType,
+                NullableReferenceTypes.CreateMethodReturnContext(m));
+            var methodName =
+                Naming.OperatorFormats.TryGetValue(m.Name, out var operatorFormat) ?
+                operatorFormat.IsRequiredPostFix ?
+                    $"{operatorFormat.Name} {returnTypeName}(" :
+                    $"{returnTypeName} {operatorFormat.Name}(" :
+                $"{returnTypeName} {Naming.GetName(m, MethodForms.WithPreBrace)}";
             await tw.WriteAsync(
-                $"{CecilUtilities.GetModifierKeywordString(m)} {Naming.GetName(m, MethodForms.WithPreBrace | MethodForms.WithReturnType)}");
+                $"{CecilUtilities.GetModifierKeywordString(m)} {methodName}");
         }
 
-        await WriteSignatureBodyAsync(tw, m, ct);
+        await WriteSignatureParameterListAsync(tw, m, ct);
+        await WriteGenericConstraintClausesAsync(tw, m, 4, ";", ct);
     }
 
     public static async Task WriteDelegateSignatureAsync(
@@ -176,9 +339,11 @@ internal static class WriterUtilities
         var m = delegateType.Methods.First(m => m.Name.StartsWith("Invoke"));
 
         await WriteCustomAttributesAsync(tw, delegateType, 0, ct);
+        await WriteCustomAttributesAsync(tw, m.MethodReturnType, 0, "return", ct);
         await tw.WriteAsync(
-            $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {Naming.GetName(m.ReturnType)} {Naming.GetName(delegateType)}(");
-        await WriteSignatureBodyAsync(tw, m, ct);
+            $"{CecilUtilities.GetModifierKeywordString(delegateType, false)} {NullableReferenceTypes.GetName(m.ReturnType, NullableReferenceTypes.CreateMethodReturnContext(m))} {Naming.GetName(delegateType)}(");
+        await WriteSignatureParameterListAsync(tw, m, ct);
+        await WriteGenericConstraintClausesAsync(tw, delegateType, 4, ";", ct);
     }
 
     public static async Task WriteEnumValuesAsync(
@@ -202,13 +367,13 @@ internal static class WriterUtilities
             {
                 await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)},");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, enumType.GetEnumUnderlyingType())},");
             }
             else
             {
                 await WriteCustomAttributesAsync(tw, field, 4, ct);
                 await tw.WriteLineAsync(
-                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, field.FieldType)}");
+                    $"    {Naming.GetName(field)} = {GetPrettyPrintValue(field.Constant, enumType.GetEnumUnderlyingType())}");
             }
         }
 
@@ -220,7 +385,12 @@ internal static class WriterUtilities
         object? value, TypeReference type) =>
         value switch
         {
-            // TODO: Enum types
+            _ when CecilUtilities.IsEnumType(type) =>
+                type.Resolve().Fields.
+                Where(field => field.IsLiteral && field.Constant is not null).
+                FirstOrDefault(field => System.Convert.ToDecimal(field.Constant) == System.Convert.ToDecimal(value)) is { } matchedField ?
+                    $"{Naming.GetName(type)}.{Naming.GetName(matchedField)}" :
+                    value?.ToString() ?? type.Name,
             null => "null",
             bool b => b ? "true" : "false",
             long l => $"{l}L",
@@ -425,6 +595,165 @@ internal static class WriterUtilities
         }
     }
 
+    private static string[] SplitTopLevelArguments(string text)
+    {
+        var arguments = new List<string>();
+        var braceDepth = 0;
+        var bracketDepth = 0;
+        var startIndex = 0;
+
+        for (var index = 0; index < text.Length; index++)
+        {
+            switch (text[index])
+            {
+                case '{':
+                    braceDepth++;
+                    break;
+
+                case '}':
+                    braceDepth--;
+                    break;
+
+                case '[':
+                    bracketDepth++;
+                    break;
+
+                case ']':
+                    bracketDepth--;
+                    break;
+
+                case ',' when braceDepth == 0 && bracketDepth == 0:
+                    arguments.Add(text.Substring(startIndex, index - startIndex).Trim());
+                    startIndex = index + 1;
+                    break;
+            }
+        }
+
+        var lastArgument = text.Substring(startIndex).Trim();
+        if (lastArgument.Length >= 1)
+        {
+            arguments.Add(lastArgument);
+        }
+
+        return arguments.ToArray();
+    }
+
+    private static string SimplifyXmlDocTypeLabel(string label)
+    {
+        if (label.EndsWith("@"))
+        {
+            return $"ref {SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 1))}";
+        }
+        else if (label.EndsWith("*"))
+        {
+            return $"{SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 1))}*";
+        }
+        else if (label.EndsWith("[]"))
+        {
+            return $"{SimplifyXmlDocTypeLabel(label.Substring(0, label.Length - 2))}[]";
+        }
+        else if (label.EndsWith("]"))
+        {
+            var arrayIndex = label.LastIndexOf('[');
+            if (arrayIndex >= 0)
+            {
+                var dimensions = label.Substring(
+                    arrayIndex + 1,
+                    label.Length - arrayIndex - 2);
+                var dimensionParts = dimensions.Split(',');
+                if (dimensionParts.Length >= 1 &&
+                    dimensionParts.All(dimension => dimension == "0:"))
+                {
+                    return $"{SimplifyXmlDocTypeLabel(label.Substring(0, arrayIndex))}[{new string(',', dimensionParts.Length - 1)}]";
+                }
+            }
+        }
+
+        var genericIndex = label.IndexOf('{');
+        if (genericIndex >= 0 &&
+            label.EndsWith("}"))
+        {
+            var typeName = label.Substring(0, genericIndex);
+            var argumentText = label.Substring(genericIndex + 1, label.Length - genericIndex - 2);
+            return $"{SimplifyXmlDocTypeLabel(typeName)}<{string.Join(", ", SplitTopLevelArguments(argumentText).Select(SimplifyXmlDocTypeLabel))}>";
+        }
+
+        if (Naming.CSharpKeywords.TryGetValue(label, out var keyword))
+        {
+            return keyword;
+        }
+
+        if (label.StartsWith("``") ||
+            label.StartsWith("`"))
+        {
+            return label;
+        }
+
+        var lastDotIndex = label.LastIndexOf('.');
+        var simplifiedLabel = lastDotIndex >= 0 ?
+            label.Substring(lastDotIndex + 1) :
+            label;
+
+        var genericArityIndex = simplifiedLabel.IndexOf('`');
+        return genericArityIndex >= 0 ?
+            simplifiedLabel.Substring(0, genericArityIndex) :
+            simplifiedLabel;
+    }
+
+    private static string SimplifyReferenceLabel(string label)
+    {
+        var separatorIndex = label.IndexOf(':');
+        if (separatorIndex >= 0)
+        {
+            label = label.Substring(separatorIndex + 1);
+        }
+
+        string? returnTypeLabel = null;
+        var returnTypeIndex = label.IndexOf('~');
+        if (returnTypeIndex >= 0)
+        {
+            returnTypeLabel = label.Substring(returnTypeIndex + 1);
+            label = label.Substring(0, returnTypeIndex);
+        }
+
+        var parameterIndex = label.IndexOf('(');
+        if (parameterIndex >= 0)
+        {
+            label = label.Substring(0, parameterIndex);
+        }
+
+        var lastDotIndex = label.LastIndexOf('.');
+        if (lastDotIndex >= 0)
+        {
+            label = label.Substring(lastDotIndex + 1);
+        }
+
+        if (Naming.OperatorFormats.TryGetValue(label, out var operatorFormat))
+        {
+            var operatorLabel =
+                operatorFormat.IsRequiredPostFix &&
+                !string.IsNullOrWhiteSpace(returnTypeLabel) ?
+                $"{operatorFormat.Name} {SimplifyXmlDocTypeLabel(returnTypeLabel!)}" :
+                operatorFormat.Name;
+            return EscapeSpecialCharacters(operatorLabel);
+        }
+
+        var genericIndex = label.IndexOf('`');
+        if (genericIndex >= 0)
+        {
+            label = label.Substring(0, genericIndex);
+        }
+
+        label = label switch
+        {
+            "#ctor" => "Constructor",
+            "#cctor" => "Static constructor",
+            _ => label,
+        };
+
+        return EscapeSpecialCharacters(label);
+    }
+
     public static string RenderReference(
         XElement element,
         IReadOnlyDictionary<string, string> hri,
@@ -433,42 +762,6 @@ internal static class WriterUtilities
         var cref = element.Attribute("cref")?.Value?.Trim();
         var identity = EscapeSpecialCharacters(string.Join(" ",
             element.Value.Replace("\r", string.Empty).Split('\n').Select(c => c.Trim())));
-
-        static string SimplifyReferenceLabel(string label)
-        {
-            var separatorIndex = label.IndexOf(':');
-            if (separatorIndex >= 0)
-            {
-                label = label.Substring(separatorIndex + 1);
-            }
-
-            var parameterIndex = label.IndexOf('(');
-            if (parameterIndex >= 0)
-            {
-                label = label.Substring(0, parameterIndex);
-            }
-
-            var lastDotIndex = label.LastIndexOf('.');
-            if (lastDotIndex >= 0)
-            {
-                label = label.Substring(lastDotIndex + 1);
-            }
-
-            var genericIndex = label.IndexOf('`');
-            if (genericIndex >= 0)
-            {
-                label = label.Substring(0, genericIndex);
-            }
-
-            label = label switch
-            {
-                "#ctor" => "Constructor",
-                "#cctor" => "Static constructor",
-                _ => label,
-            };
-
-            return EscapeSpecialCharacters(label);
-        }
 
         static string? NormalizeReferenceKey(string? cref)
         {

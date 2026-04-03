@@ -80,7 +80,18 @@ public sealed class ProgramTests
             Assert.Multiple(() =>
             {
                 Assert.That(exitCode, Is.EqualTo(0));
-                Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
+                Assert.That(
+                    outputWriter.ToString(),
+                    Does.Contain($"Input assembly: {Path.GetFullPath(FixtureArtifacts.AssemblyPath)}"));
+                Assert.That(
+                    outputWriter.ToString(),
+                    Does.Contain($"Input XML: {Path.ChangeExtension(Path.GetFullPath(FixtureArtifacts.AssemblyPath), ".xml")}"));
+                Assert.That(
+                    outputWriter.ToString(),
+                    Does.Contain($"Output markdown: {markdownPath}"));
+                Assert.That(
+                    outputWriter.ToString(),
+                    Does.Match(@"(?m)^Elapsed time: \d+\.\d{3} ms$"));
                 Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
                 Assert.That(markdown, Does.StartWith("## Dockit.TestAssembly assembly"));
             });

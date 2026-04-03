@@ -1,4 +1,5 @@
 using Dockit.Internal;
+using Mono.Cecil;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
@@ -66,15 +67,58 @@ public sealed class WriterUtilitiesTests
     }
 
     [Test]
+    public void RenderReference_resolves_implicit_operator_cref_to_local_anchor()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var implicitOperator = genericType.Methods.Single(method => method.Name == "op_Implicit");
+        var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+
+        var rendered = WriterUtilities.RenderReference(
+            XElement.Parse("""<seealso cref="M:Fixture.Root.GenericSample`2.op_Implicit(Fixture.Root.GenericSample{`0,`1})~System.String" />"""),
+            identities,
+            "fixture.md");
+
+        Assert.That(
+            rendered,
+            Is.EqualTo($" [implicit operator string](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
+    }
+
+    [Test]
+    public void RenderReference_resolves_binary_operator_cref_to_local_anchor()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var additionOperator = genericType.Methods.Single(method => method.Name == "op_Addition");
+        var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+
+        var rendered = WriterUtilities.RenderReference(
+            new XElement(
+                "seealso",
+                new XAttribute("cref", $"M:{DotNetXmlNaming.GetDotNetXmlName(additionOperator)}")),
+            identities,
+            "fixture.md");
+
+        Assert.That(
+            rendered,
+            Is.EqualTo($" [operator +](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)]}) "));
+    }
+
+    [Test]
     public void GeneratePandocFormedHashReferenceIdentities_creates_entries_for_xml_names_and_unique_overloads()
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var visibilityType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "VisibilityContainer");
         var overloads = genericType.Methods.Where(method => method.Name == "Overload").ToArray();
+        var varArgOverloads = visibilityType.Methods.Where(method => method.Name == "AcceptVarArgs").ToArray();
 
         var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
         var overloadIdentities = overloads.
-            Select(method => identities[FullNaming.GetFullName(method)]).
+            Select(method => identities[FullNaming.GetFullSignaturedName(method)]).
+            ToArray();
+        var varArgOverloadIdentities = varArgOverloads.
+            Select(method => identities[FullNaming.GetFullSignaturedName(method)]).
             ToArray();
 
         Assert.Multiple(() =>
@@ -82,6 +126,48 @@ public sealed class WriterUtilitiesTests
             Assert.That(identities, Contains.Key(FullNaming.GetFullName(genericType)));
             Assert.That(identities, Contains.Key(DotNetXmlNaming.GetDotNetXmlName(genericType)));
             Assert.That(overloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
+            Assert.That(varArgOverloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(varArgOverloads.Single(method => method.CallingConvention == MethodCallingConvention.VarArg)),
+                Does.EndWith("AcceptVarArgs(System.Int32,)"));
         });
+    }
+
+    [Test]
+    public void GetGenericConstraintClauses_formats_type_and_method_constraints()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var constrainedType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "ConstrainedContainer`1");
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var constrainedMethod = genericType.Methods.Single(method => method.Name == "CreateConstrained");
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(
+                WriterUtilities.GetGenericConstraintClauses(constrainedType),
+                Is.EqualTo(new[] { "where TValue : BaseType, IMarker, new()" }));
+            Assert.That(
+                WriterUtilities.GetGenericConstraintClauses(constrainedMethod),
+                Is.EqualTo(new[] { "where TResult : BaseType, IMarker, new()" }));
+        });
+    }
+
+    [Test]
+    public void GetCustomAttributeDeclarationWithTarget_inserts_return_target()
+    {
+        Assert.That(
+            WriterUtilities.GetCustomAttributeDeclarationWithTarget("[MaybeNull]", "return"),
+            Is.EqualTo("[return: MaybeNull]"));
+    }
+
+    [Test]
+    public void GetPrettyPrintValue_formats_enum_values_symbolically()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var enumType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "SampleState");
+
+        Assert.That(
+            WriterUtilities.GetPrettyPrintValue(1, enumType),
+            Is.EqualTo("SampleState.Started"));
     }
 }

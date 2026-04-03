@@ -66,7 +66,6 @@ dockit-dotnet [options] <assembly-path> <output-directory>
 
 - `-h`, `--help`: 使い方を表示します。
 - `-l VALUE`, `--initial-level=VALUE`: 生成される Markdown の見出し開始レベルを設定します。デフォルトは `1` です。
-- `-e VALUE`, `--entry=VALUE`: ソースのエントリポイントを追加します。複数回指定できます。
 
 実行前に、以下を確認してください。
 
@@ -90,6 +89,15 @@ dockit-dotnet ./src/MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs/api
 ```
 
 これにより `./docs/api/MyLibrary.md` が出力されます。
+
+成功時には、解決された入力元と出力先のパスが標準出力に表示されます。
+
+```text
+Input assembly: /absolute/path/to/MyLibrary.dll
+Input XML: /absolute/path/to/MyLibrary.xml
+Output markdown: /absolute/path/to/docs/api/MyLibrary.md
+Elapsed time: 123.456 ms
+```
 
 通常のビルド後にドキュメントを生成する例:
 
@@ -117,6 +125,7 @@ dockit-ts [options] <project-path> <output-directory>
 
 - `-h`, `--help`: 使い方を表示します。
 - `-l VALUE`, `--initial-level=VALUE`: 生成される Markdown の見出し開始レベルを設定します。デフォルトは `1` です。
+- `-e VALUE`, `--entry=VALUE`: ソースのエントリポイントを追加します。複数回指定できます。
 
 実行前に、以下を確認してください。
 
@@ -152,6 +161,14 @@ dockit-ts ./path/to/package ./docs/api
 ```
 
 これにより `./docs/api/<package-name>.md` が出力されます。
+
+成功時には、解決された入力元と出力先のパスが標準出力に表示されます。
+
+```text
+Input project: /absolute/path/to/package
+Output markdown: /absolute/path/to/docs/api/<package-name>.md
+Elapsed time: 123.456 ms
+```
 
 ソースファイルを `src` 配下に保持する CLI スタイルのパッケージから Markdown を生成する例:
 

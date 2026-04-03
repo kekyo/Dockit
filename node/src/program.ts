@@ -8,6 +8,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 import { mkdir } from 'node:fs/promises';
+import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 import { analyzeProject } from './internal/analyzer.js';
 import {
@@ -125,13 +126,13 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
 };
 
 const writeUsage = (writer: NodeJS.WritableStream): void => {
-  writer.write(`Dockit [typescript] [${version}-${git_commit_hash}]`);
+  writer.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
   writer.write(
     'Generate Markdown documentation from a TypeScript or JavaScript npm project.\n'
   );
-  writer.write('Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)');
-  writer.write('https://github.com/kekyo/Dockit');
-  writer.write('License: Under MIT.');
+  writer.write('Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)\n');
+  writer.write('https://github.com/kekyo/Dockit\n');
+  writer.write('License: Under MIT.\n');
   writer.write('\n');
   writer.write(
     'Usage: dockit-ts [options] <project-path> <output-directory>\n'
@@ -145,6 +146,9 @@ const writeUsage = (writer: NodeJS.WritableStream): void => {
     '  -e VALUE, --entry=VALUE    Add a source entry point. Can be specified multiple times.\n'
   );
 };
+
+const formatElapsedTime = (elapsedMilliseconds: number): string =>
+  `${elapsedMilliseconds.toFixed(3)} ms`;
 
 /**
  * Runs the dockit-ts command line interface.
@@ -166,13 +170,14 @@ export const run = async (
     return 0;
   }
 
+  const startedAt = performance.now();
+  outputWriter.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
+
   try {
-    const packageDocumentation = await analyzeProject(
-      commandLine.projectPath!,
-      {
-        entryPaths: commandLine.entryPaths,
-      }
-    );
+    const projectPath = resolve(commandLine.projectPath!);
+    const packageDocumentation = await analyzeProject(projectPath, {
+      entryPaths: commandLine.entryPaths,
+    });
     const outputDirectory = resolve(commandLine.outputDirectory!);
     const markdownPath = getMarkdownOutputPath(
       outputDirectory,
@@ -184,6 +189,13 @@ export const run = async (
       markdownPath,
       packageDocumentation,
       commandLine.initialLevel
+    );
+
+    outputWriter.write('Converted TypeScript --> Markdown\n');
+    outputWriter.write(`Input project: ${projectPath}\n`);
+    outputWriter.write(`Output markdown: ${markdownPath}\n`);
+    outputWriter.write(
+      `Elapsed time: ${formatElapsedTime(performance.now() - startedAt)}\n`
     );
 
     return 0;

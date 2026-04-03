@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Fixture.Root
 {
@@ -33,6 +35,64 @@ namespace Fixture.Root
     /// <typeparam name="TInput">Delegate input type.</typeparam>
     /// <typeparam name="TOutput">Delegate output type.</typeparam>
     public delegate TOutput Transformer<in TInput, out TOutput>(TInput input);
+
+    /// <summary>Represents a byref-like buffer slice.</summary>
+    public readonly ref struct BufferSlice
+    {
+        /// <summary>Gets the slice length.</summary>
+        public readonly int Length;
+
+        /// <summary>Initializes a new buffer slice.</summary>
+        /// <param name="length">Slice length.</param>
+        public BufferSlice(int length) =>
+            Length = length;
+    }
+
+    /// <summary>Represents a nominal record.</summary>
+    public record NameRecord(string Name);
+
+    /// <summary>Represents a value record.</summary>
+    public readonly record struct ValueRecord(int Value);
+
+    /// <summary>Provides native interop members.</summary>
+    public static class NativeMethods
+    {
+        /// <summary>Calls the native message beep API.</summary>
+        /// <param name="type">Beep type.</param>
+        /// <returns>Returns whether the API succeeded.</returns>
+        [DllImport("user32.dll", ExactSpelling = true)]
+        public static extern bool MessageBeep(uint type);
+    }
+
+    /// <summary>Represents a constrained container.</summary>
+    /// <typeparam name="TValue">Constrained value type.</typeparam>
+    public class ConstrainedContainer<TValue>
+        where TValue : BaseType, IMarker, new()
+    {
+    }
+
+    /// <summary>Contains nullable reference type members.</summary>
+    public class NullableContainer
+    {
+        /// <summary>Gets or sets the optional name.</summary>
+        public string? OptionalName { get; set; }
+
+        /// <summary>Creates a nullable map.</summary>
+        /// <param name="prefix">Optional prefix.</param>
+        /// <param name="values">Optional values.</param>
+        /// <returns>Optional map.</returns>
+        public Dictionary<string, string?>? CreateNullableMap(
+            string? prefix,
+            List<string?>? values) =>
+            null;
+
+        /// <summary>Returns text with a nullable contract.</summary>
+        /// <param name="value">Input value.</param>
+        /// <returns>Returned value.</returns>
+        [return: MaybeNull]
+        public string ReturnMaybeNull(string value) =>
+            value;
+    }
 
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>
@@ -75,6 +135,9 @@ namespace Fixture.Root
 
         /// <summary>Gets a shared value.</summary>
         public static readonly string SharedField = "shared";
+
+        /// <summary>Gets the initial state.</summary>
+        public const SampleState InitialState = SampleState.Started;
 
         /// <summary>Represents mutable data.</summary>
         /// <remarks>Legacy field.</remarks>
@@ -150,6 +213,13 @@ namespace Fixture.Root
         {
         }
 
+        /// <summary>Creates a constrained result.</summary>
+        /// <typeparam name="TResult">Result type.</typeparam>
+        /// <returns>Created result.</returns>
+        public TResult CreateConstrained<TResult>()
+            where TResult : BaseType, IMarker, new() =>
+            new();
+
         /// <summary>Handles a matrix.</summary>
         /// <param name="matrix">Matrix parameter.</param>
         public void HandleMatrix(int[,] matrix)
@@ -173,8 +243,17 @@ namespace Fixture.Root
         {
         }
 
+        /// <summary>Combines two samples.</summary>
+        /// <param name="left">Left sample.</param>
+        /// <param name="right">Right sample.</param>
+        /// <returns>Combined sample.</returns>
+        public static GenericSample<TItem, TValue> operator +(
+            GenericSample<TItem, TValue> left,
+            GenericSample<TItem, TValue> right) => left;
+
         /// <summary>Converts a sample to a string.</summary>
         /// <param name="sample">Sample parameter.</param>
+        /// <seealso cref="operator +(GenericSample{TItem, TValue}, GenericSample{TItem, TValue})" />
         public static implicit operator string(GenericSample<TItem, TValue> sample) => sample.Name;
 
         /// <summary>Raises the changed event.</summary>
@@ -221,7 +300,20 @@ namespace Fixture.Root
         internal event EventHandler? HiddenEvent;
 
         /// <summary>Visible method.</summary>
+        [EditorBrowsable(EditorBrowsableState.Always)]
         public void VisibleMethod()
+        {
+        }
+
+        /// <summary>Consumes one argument.</summary>
+        /// <param name="value">Value parameter.</param>
+        public void AcceptVarArgs(int value)
+        {
+        }
+
+        /// <summary>Consumes variable arguments.</summary>
+        /// <param name="value">Value parameter.</param>
+        public void AcceptVarArgs(int value, __arglist)
         {
         }
 
@@ -264,6 +356,7 @@ namespace Fixture.Secondary
     {
         /// <summary>Returns text.</summary>
         /// <returns>Static text.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string Echo() => "secondary";
     }
 }

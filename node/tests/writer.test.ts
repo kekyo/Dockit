@@ -45,10 +45,16 @@ describe('writeMarkdown', () => {
       expect(markdown).toContain(
         '| [ `createResult()` ](./dockit-ts-fixture.md#createresult-function) |'
       );
-      expect(markdown).toContain('<a id="root-module"></a>');
-      expect(markdown).toContain('<a id="extras-module"></a>');
-      expect(markdown).toContain('<a id="createresult-function"></a>');
-      expect(markdown).toContain('## Root module');
+      expect(markdown).not.toContain('<a id="');
+      expect(markdown).toContain(
+        '<a name="root-module"></a>\n\n## Root module'
+      );
+      expect(markdown).toContain(
+        '<a name="extras-module"></a>\n\n## ./extras module'
+      );
+      expect(markdown).toContain(
+        '<a name="createresult-function"></a>\n\n### createResult() function'
+      );
       expect(markdown).toContain('### Box class');
       expect(markdown).toContain('Represents a box.');
       expect(markdown).toContain('| `TValue` | Stored value type. |');

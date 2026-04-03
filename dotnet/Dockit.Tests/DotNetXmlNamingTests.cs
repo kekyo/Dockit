@@ -1,4 +1,5 @@
 using Dockit.Internal;
+using Mono.Cecil;
 using NUnit.Framework;
 using System.Linq;
 using System.Threading.Tasks;
@@ -35,6 +36,7 @@ public sealed class DotNetXmlNamingTests
         var document = await FixtureArtifacts.LoadDocumentAsync();
 
         var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var visibilityType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "VisibilityContainer");
         var extensionType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSampleExtensions");
 
         var constructor = genericType.Methods.Single(method => method.IsConstructor && !method.IsStatic);
@@ -45,6 +47,10 @@ public sealed class DotNetXmlNamingTests
         var rewriteMapMethod = genericType.Methods.Single(method => method.Name == "RewriteMap");
         var handleMatrixMethod = genericType.Methods.Single(method => method.Name == "HandleMatrix");
         var usePointerMethod = genericType.Methods.Single(method => method.Name == "UsePointer");
+        var acceptVarArgsMethod = visibilityType.Methods.Single(method =>
+            method.Name == "AcceptVarArgs" &&
+            method.CallingConvention == MethodCallingConvention.VarArg);
+        var additionOperatorMethod = genericType.Methods.Single(method => method.Name == "op_Addition");
         var implicitOperatorMethod = genericType.Methods.Single(method => method.Name == "op_Implicit");
         var onChangedMethod = genericType.Methods.Single(method => method.Name == "OnChanged");
         var extensionMethod = extensionType.Methods.Single(method => method.Name == "Extend");
@@ -77,6 +83,12 @@ public sealed class DotNetXmlNamingTests
             Assert.That(
                 DotNetXmlNaming.GetDotNetXmlName(usePointerMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Uses a pointer.")));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(acceptVarArgsMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Consumes variable arguments.")));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(additionOperatorMethod),
+                Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Combines two samples.")));
             Assert.That(
                 DotNetXmlNaming.GetDotNetXmlName(implicitOperatorMethod),
                 Is.EqualTo(FixtureArtifacts.GetXmlNameBySummary(document, DotNetXmlMemberTypes.Method, "Converts a sample to a string.")));

@@ -151,6 +151,9 @@ internal static class CecilUtilities
         ThenBy(Naming.GetSignaturedName).
         ToArray();
 
+    public static bool IsVarArgMethod(MethodReference method) =>
+        method.CallingConvention == MethodCallingConvention.VarArg;
+
     public static ParameterModifierCandidates GetParameterModifier(ParameterDefinition parameter) =>
         parameter.IsIn ? ParameterModifierCandidates.In :
         parameter.IsOut ? ParameterModifierCandidates.Out :
@@ -164,6 +167,56 @@ internal static class CecilUtilities
 
     public static bool IsEnumType(TypeReference type) =>
         type.IsValueType && type.Resolve().IsEnum;
+
+    public static bool IsRefStructType(TypeReference type) =>
+        type.IsValueType &&
+        type.Resolve().CustomAttributes.Any(ca =>
+            ca.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute");
+
+    public static bool IsRecordClassType(TypeReference type)
+    {
+        if (type.IsValueType)
+        {
+            return false;
+        }
+
+        var resolvedType = type.Resolve();
+        return resolvedType.Methods.Any(method => method.Name == "<Clone>$") ||
+            resolvedType.Properties.Any(property =>
+                property.Name == "EqualityContract" &&
+                property.PropertyType.FullName == "System.Type");
+    }
+
+    public static bool IsRecordStructType(TypeReference type)
+    {
+        if (!type.IsValueType)
+        {
+            return false;
+        }
+
+        var resolvedType = type.Resolve();
+        return !resolvedType.IsEnum &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "PrintMembers" &&
+                method.Parameters.Count == 1 &&
+                method.Parameters[0].ParameterType.FullName == "System.Text.StringBuilder" &&
+                method.ReturnType.FullName == "System.Boolean") &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "Equals" &&
+                method.Parameters.Count == 1 &&
+                method.ReturnType.FullName == "System.Boolean" &&
+                method.Parameters[0].ParameterType.FullName == resolvedType.FullName) &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "GetHashCode" &&
+                method.Parameters.Count == 0 &&
+                method.ReturnType.FullName == "System.Int32") &&
+            resolvedType.Methods.Any(method =>
+                method.Name == "ToString" &&
+                method.Parameters.Count == 0 &&
+                method.ReturnType.FullName == "System.String") &&
+            resolvedType.Methods.Any(method => method.Name == "op_Equality") &&
+            resolvedType.Methods.Any(method => method.Name == "op_Inequality");
+    }
 
     public static string GetTypeKeywordString(TypeReference type)
     {
@@ -181,6 +234,14 @@ internal static class CecilUtilities
             {
                 return "enum";
             }
+            else if (IsRecordStructType(type))
+            {
+                return "record struct";
+            }
+            else if (IsRefStructType(type))
+            {
+                return "ref struct";
+            }
             else
             {
                 return "struct";
@@ -196,6 +257,10 @@ internal static class CecilUtilities
         else if (t.BaseType?.FullName == "System.MulticastDelegate")
         {
             return "delegate";
+        }
+        else if (IsRecordClassType(type))
+        {
+            return "record";
         }
         else if (t.IsClass)
         {
@@ -316,6 +381,11 @@ internal static class CecilUtilities
     public static string GetPropertyEventModifierKeywordString(
         MethodDefinition method)
     {
+        return GetAccessibilityKeyword(method);
+    }
+
+    private static string GetAccessibilityKeyword(MethodDefinition method)
+    {
         var sb = new StringBuilder();
 
         if (method.IsPublic)
@@ -344,6 +414,40 @@ internal static class CecilUtilities
         }
 
         return sb.ToString();
+    }
+
+    private static int GetAccessibilityRank(MethodDefinition method) =>
+        method.IsPublic ? 5 :
+        method.IsFamilyOrAssembly ? 4 :
+        method.IsFamily ? 3 :
+        method.IsAssembly ? 2 :
+        method.IsFamilyAndAssembly ? 1 :
+        0;
+
+    public static string GetAggregatedPropertyModifierKeywordString(PropertyDefinition property) =>
+        new[] { GetGetter(property), GetSetter(property) }.
+        Where(method => method is not null).
+        Cast<MethodDefinition>().
+        OrderByDescending(GetAccessibilityRank).
+        Select(GetAccessibilityKeyword).
+        First();
+
+    public static string GetAggregatedEventModifierKeywordString(EventDefinition @event) =>
+        new[] { GetAdd(@event), GetRemove(@event) }.
+        Where(method => method is not null).
+        Cast<MethodDefinition>().
+        OrderByDescending(GetAccessibilityRank).
+        Select(GetAccessibilityKeyword).
+        First();
+
+    public static string GetAccessorModifierKeywordString(
+        string aggregatedModifier,
+        MethodDefinition method)
+    {
+        var modifier = GetPropertyEventModifierKeywordString(method);
+        return modifier == aggregatedModifier ?
+            string.Empty :
+            modifier + " ";
     }
 
     public static string GetModifierKeywordString(
@@ -379,6 +483,11 @@ internal static class CecilUtilities
         if (method.IsStatic)
         {
             sb.Append(" static");
+        }
+
+        if (method.IsPInvokeImpl || method.IsInternalCall)
+        {
+            sb.Append(" extern");
         }
 
         if (method.IsAbstract)

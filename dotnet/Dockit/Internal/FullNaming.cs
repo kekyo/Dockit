@@ -121,8 +121,10 @@ internal static class FullNaming
         $"{GetFullName(@event.DeclaringType)}.{Naming.GetName(@event)}";
 
     private static string GetMethodSignature(MethodReference method) =>
-        string.Join(",", method.Parameters.
-            Select(p => $"{CecilUtilities.GetMethodParameterPreSignature(method, p.Index)}{GetFullName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {Naming.GetName(p)}"));
+        string.Join(",",
+            method.Parameters.
+                Select(p => $"{CecilUtilities.GetMethodParameterPreSignature(method, p.Index)}{GetFullName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {Naming.GetName(p)}").
+                Concat(CecilUtilities.IsVarArgMethod(method) ? new[] { "__arglist" } : Utilities.Empty<string>()));
 
     public static string GetFullSignaturedName(MethodReference method)
     {
