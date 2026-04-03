@@ -7,7 +7,7 @@
 |Package|Link|
 |:----|:----|
 |dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
-|dockit-ts (NPM CLI)|[![NPM dockit-ts](https://img.shields.io/npm/v/dockit-ts.svg)](https://www.npmjs.com/package/dockit-ts)|
+|dockit-cli (NPM CLI)|[![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)|
 
 ----
 
@@ -50,7 +50,7 @@ Or, pre-built .NET Framework binaries in [GitHub Release page](https://github.co
 Install the `NPM` package via npmjs:
 
 ```bash
-npm install -g dockit-ts
+npm install -g dockit-cli
 ```
 
 ----
@@ -151,7 +151,7 @@ For CLI-oriented packages, you can set custom entry points in `package.json`:
 Generate Markdown from an npm package:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs ./path/to/package ./docs/api
+dockit-ts ./path/to/package ./docs/api
 ```
 
 This writes `./docs/api/<package-name>.md`.
@@ -159,7 +159,7 @@ This writes `./docs/api/<package-name>.md`.
 Generate Markdown from a CLI-style package that keeps source files under `src`:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs --entry ./src/index.ts ./path/to/package ./docs/api
+dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
 ```
 
 ----

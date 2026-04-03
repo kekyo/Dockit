@@ -5,7 +5,7 @@
 | Package               | Link                                                                                                                       |
 | :-------------------- | :------------------------------------------------------------------------------------------------------------------------- |
 | dockit-cli (.NET CLI) | [![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli) |
-| dockit-ts (NPM CLI)   | [![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)                 |
+| dockit-cli (NPM CLI)  | [![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)                 |
 
 ---
 
@@ -56,7 +56,7 @@ Available options:
 Generate Markdown from an npm package:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs ./path/to/package ./docs/api
+dockit-ts ./path/to/package ./docs/api
 ```
 
 This writes `./docs/api/<package-name>.md`.
@@ -64,7 +64,7 @@ This writes `./docs/api/<package-name>.md`.
 Generate Markdown from a CLI-style package that keeps source files under `src`:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs --entry ./src/index.ts ./path/to/package ./docs/api
+dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
 ```
 
 ### Documents

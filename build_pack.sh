@@ -24,5 +24,5 @@ zip artifacts/dockit-${VERSION}.zip README.md LICENSE Images/Dockit.100.png
 dotnet pack -p:Configuration=Release -p:Platform="Any CPU" -o artifacts Dockit.sln
 
 cd node/dockit-ts
-npm i
+npm ci
 npm run pack
