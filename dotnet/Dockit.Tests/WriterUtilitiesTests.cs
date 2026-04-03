@@ -43,7 +43,7 @@ public sealed class WriterUtilitiesTests
             Assert.That(rendered, Does.Contain("Intro &amp; detail"));
             Assert.That(rendered, Does.Contain("Paragraph with"));
             Assert.That(rendered, Does.Contain("`inline`"));
-            Assert.That(rendered, Does.Contain("[VisibilityContainer](./fixture.md#visibilitycontainer-class)"));
+            Assert.That(rendered, Does.Contain("[VisibilityContainer](#visibilitycontainer-class)"));
             Assert.That(rendered, Does.Contain("```csharp"));
             Assert.That(rendered, Does.Contain("if (value < 1)"));
             Assert.That(rendered, Does.Contain("<custom attr=\"1\">custom text</custom>"));
@@ -63,7 +63,7 @@ public sealed class WriterUtilitiesTests
             },
             "fixture.md");
 
-        Assert.That(rendered, Is.EqualTo(" [Name](./fixture.md#name-property) "));
+        Assert.That(rendered, Is.EqualTo(" [Name](#name-property) "));
     }
 
     [Test]
@@ -81,7 +81,7 @@ public sealed class WriterUtilitiesTests
 
         Assert.That(
             rendered,
-            Is.EqualTo($" [implicit operator string](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
+            Is.EqualTo($" [implicit operator string](#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
     }
 
     [Test]
@@ -101,7 +101,7 @@ public sealed class WriterUtilitiesTests
 
         Assert.That(
             rendered,
-            Is.EqualTo($" [operator +](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)]}) "));
+            Is.EqualTo($" [operator +](#{identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)]}) "));
     }
 
     [Test]

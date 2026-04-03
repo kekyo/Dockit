@@ -36,14 +36,10 @@ describe('writeMarkdown', () => {
 
       expect(markdown).toContain('# dockit-ts-fixture package');
       expect(markdown).toContain('| `PackageVersion` | &quot;1.2.3&quot; |');
+      expect(markdown).toContain('| [ `.` ](#root-module) |');
+      expect(markdown).toContain('| [ `./extras` ](#extras-module) |');
       expect(markdown).toContain(
-        '| [ `.` ](./dockit-ts-fixture.md#root-module) |'
-      );
-      expect(markdown).toContain(
-        '| [ `./extras` ](./dockit-ts-fixture.md#extras-module) |'
-      );
-      expect(markdown).toContain(
-        '| [ `createResult()` ](./dockit-ts-fixture.md#createresult-function) |'
+        '| [ `createResult()` ](#createresult-function) |'
       );
       expect(markdown).not.toContain('<a id="');
       expect(markdown).toContain(
@@ -80,9 +76,7 @@ describe('writeMarkdown', () => {
       expect(markdown).toContain(
         '| `Busy` | Busy state. Used while processing is active. |'
       );
-      expect(markdown).toContain(
-        'See also: [Result](./dockit-ts-fixture.md#result-type-alias)'
-      );
+      expect(markdown).toContain('See also: [Result](#result-type-alias)');
 
       const createResultSectionIndex = markdown.indexOf(
         '### createResult() function'

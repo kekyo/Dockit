@@ -109,13 +109,6 @@ dotnet build -c Release
 dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
 ```
 
-Generate Markdown first, then convert it with Pandoc:
-
-```bash
-dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
-pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
-```
-
 ### TypeScript / JavaScript
 
 The TypeScript generator accepts a package root path and an output directory:
@@ -177,6 +170,30 @@ Generate Markdown from a CLI-style package that keeps source files under `src`:
 
 ```bash
 dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
+```
+
+----
+
+## Applications
+
+Once you've generated Markdown using Dockit, you can use [pandoc](https://pandoc.org/) to convert it into other formats.
+For example, you can generate Markdown from a .NET assembly and use pandoc to generate a PDF:
+
+```bash
+dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
+pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
+```
+
+Alternatively, you can convert the Markdown to HTML using pandoc and then generate a PDF using [wkhtmltopdf](https://wkhtmltopdf.org/).
+The advantage of this method is that you can style the formatted PDF using CSS.
+For this purpose, we have prepared a [sample CSS file](./assets/sample.css), so please use it as a reference.
+
+However, since wkhtmltopdf is now deprecated, this method is no longer recommended.
+Please use the following as a reference for converting HTML:
+
+```bash
+pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone --filter=mermaid-filter -o ./docs/MyLibrary.html
+wkhtmltopdf -s A4 -T 23mm -B 28mm -L 20mm -R 20mm --disable-smart-shrinking --keep-relative-links --zoom 1.0 --footer-spacing 7 --footer-font-name "Noto Sans" --footer-font-size 8 --footer-left "Copyright (c) FooBar. CC-BY" --footer-right "[page]/[topage]" --outline ./docs/MyLibrary.html ./docs/MyLibrary.pdf
 ```
 
 ----

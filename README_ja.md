@@ -106,13 +106,6 @@ dotnet build -c Release
 dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./artifacts/docs
 ```
 
-まず Markdown を生成し、その後 Pandoc で変換する例:
-
-```bash
-dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
-pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
-```
-
 ### TypeScript / JavaScript
 
 TypeScript ジェネレーターは、パッケージルートのパスと出力ディレクトリを受け取ります。
@@ -174,6 +167,30 @@ Elapsed time: 123.456 ms
 
 ```bash
 dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
+```
+
+----
+
+## 応用
+
+Dockit を使用して markdown を生成したら、 [pandoc](https://pandoc.org/) を使用して他のフォーマットに変換することが出来ます。
+例えば、.NETアセンブリからmarkdownを生成し、 pandoc を使ってPDFを生成します:
+
+```bash
+dockit-dotnet ./MyLibrary/bin/Release/net8.0/MyLibrary.dll ./docs
+pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
+```
+
+他にも、 pandoc でHTMLに変換してから、 [wkhtmltopdf](https://wkhtmltopdf.org/) を使用してPDFを生成できます。
+この方法で良い所は、整形後のPDFの形式をCSSで整えることが出来るということです。
+このような目的のために、 [サンプルのCSS](./assets/sample.css) を用意しておいたので、参考にして下さい。
+
+但し、現在は wkhtmltopdf が deprecated となってしまったため、今ではお勧めできない方法です。
+HTMLからの変換を行う手法として、参考にして下さい:
+
+```bash
+pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone --filter=mermaid-filter -o ./docs/MyLibrary.html
+wkhtmltopdf -s A4 -T 23mm -B 28mm -L 20mm -R 20mm --disable-smart-shrinking --keep-relative-links --zoom 1.0 --footer-spacing 7 --footer-font-name "Noto Sans" --footer-font-size 8 --footer-left "Copyright (c) FooBar. CC-BY" --footer-right "[page]/[topage]" --outline ./docs/MyLibrary.html ./docs/MyLibrary.pdf
 ```
 
 ----

@@ -53,6 +53,32 @@ describe('run', () => {
     expect(outputWriter.read()).toContain('--entry');
   });
 
+  it('returns success and banner when version is requested with the long option', async () => {
+    const outputWriter = createCapturedWritable();
+    const errorWriter = createCapturedWritable();
+
+    const exitCode = await run(
+      ['--version'],
+      outputWriter.stream,
+      errorWriter.stream
+    );
+
+    expect(exitCode).toBe(0);
+    expect(errorWriter.read()).toBe('');
+    expect(outputWriter.read()).toMatch(/^Dockit \[typescript\] \[[^\]]+\]\n$/);
+  });
+
+  it('returns success and banner when version is requested with the short option', async () => {
+    const outputWriter = createCapturedWritable();
+    const errorWriter = createCapturedWritable();
+
+    const exitCode = await run(['-v'], outputWriter.stream, errorWriter.stream);
+
+    expect(exitCode).toBe(0);
+    expect(errorWriter.read()).toBe('');
+    expect(outputWriter.read()).toMatch(/^Dockit \[typescript\] \[[^\]]+\]\n$/);
+  });
+
   it('parses the initial level option and generates markdown', async () => {
     await withTemporaryDirectory(async (outputDirectory) => {
       const outputWriter = createCapturedWritable();

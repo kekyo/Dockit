@@ -50,6 +50,48 @@ public sealed class ProgramTests
     }
 
     [Test]
+    public async Task RunAsync_returns_success_and_banner_when_version_is_requested_with_the_long_option()
+    {
+        using var outputWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+
+        var exitCode = await Program.RunAsync(
+            new[] { "--version" },
+            outputWriter,
+            errorWriter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
+            Assert.That(
+                outputWriter.ToString(),
+                Does.Match(@"^Dockit \[[^\]]+\] \[[^\]]+\]\r?\n$"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_returns_success_and_banner_when_version_is_requested_with_the_short_option()
+    {
+        using var outputWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+
+        var exitCode = await Program.RunAsync(
+            new[] { "-v" },
+            outputWriter,
+            errorWriter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(0));
+            Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
+            Assert.That(
+                outputWriter.ToString(),
+                Does.Match(@"^Dockit \[[^\]]+\] \[[^\]]+\]\r?\n$"));
+        });
+    }
+
+    [Test]
     public async Task RunAsync_parses_initial_level_option_and_generates_markdown()
     {
         using var outputWriter = new StringWriter();

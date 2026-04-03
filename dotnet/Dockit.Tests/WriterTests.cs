@@ -16,7 +16,6 @@ public sealed class WriterTests
     {
         var result = await RenderMarkdownAsync();
         var markdown = result.Markdown;
-        var markdownFileName = result.MarkdownFileName;
 
         Assert.Multiple(() =>
         {
@@ -25,8 +24,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `AssemblyFileVersion` | &quot;4.3.2.1&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyInformationalVersion` | &quot;1.2.3-test+metadata&quot; |"));
             Assert.That(markdown, Does.Contain("[CLSCompliant(false)]"));
-            Assert.That(markdown, Does.Contain($"| [ `Fixture.Root` ](./{markdownFileName}#fixture.root-namespace) |"));
-            Assert.That(markdown, Does.Contain($"| [ `Fixture.Secondary` ](./{markdownFileName}#fixture.secondary-namespace) |"));
+            Assert.That(markdown, Does.Contain("| [ `Fixture.Root` ](#fixture.root-namespace) |"));
+            Assert.That(markdown, Does.Contain("| [ `Fixture.Secondary` ](#fixture.secondary-namespace) |"));
             Assert.That(markdown, Does.Not.Contain("<a id=\""));
             Assert.That(
                 markdown,
@@ -40,7 +39,6 @@ public sealed class WriterTests
     {
         var result = await RenderMarkdownAsync();
         var markdown = result.Markdown;
-        var markdownFileName = result.MarkdownFileName;
         using var assembly = FixtureArtifacts.ReadAssembly();
         var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
         var additionOperator = genericType.Methods.Single(method => method.Name == "op_Addition");
@@ -57,9 +55,9 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Represents a generic sample type."));
             Assert.That(markdown, Does.Contain("| `TItem` | Primary item type. |"));
             Assert.That(markdown, Does.Contain("| `TValue` | Secondary value type. |"));
-            Assert.That(markdown, Does.Contain($"Type remarks with [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
+            Assert.That(markdown, Does.Contain("Type remarks with [VisibilityContainer](#visibilitycontainer-class)"));
             Assert.That(markdown, Does.Contain("var sample = new GenericSample<int, string>();"));
-            Assert.That(markdown, Does.Contain($"See also: [VisibilityContainer](./{markdownFileName}#visibilitycontainer-class)"));
+            Assert.That(markdown, Does.Contain("See also: [VisibilityContainer](#visibilitycontainer-class)"));
             Assert.That(markdown, Does.Contain("public const SampleState InitialState = SampleState.Started;"));
 
             Assert.That(markdown, Does.Contain("#### Constructor"));
@@ -73,7 +71,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `item` | Item parameter. |"));
             Assert.That(markdown, Does.Contain("| `values` | Values parameter. |"));
             Assert.That(markdown, Does.Contain("| Transformation result. |"));
-            Assert.That(markdown, Does.Contain($"See also: [Name](./{markdownFileName}#name-property)"));
+            Assert.That(markdown, Does.Contain("See also: [Name](#name-property)"));
             Assert.That(markdown, Does.Contain("#### CreateConstrained&lt;TResult&gt;() method"));
             Assert.That(markdown, Does.Contain("where TResult : BaseType, IMarker, new();"));
             Assert.That(markdown, Does.Contain("#### HandleMatrix() method"));
@@ -87,7 +85,7 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("public static GenericSample<TItem,TValue> operator +("));
 
             Assert.That(markdown, Does.Contain("Converts a sample to a string."));
-            Assert.That(markdown, Does.Contain($"See also: [operator +](./{markdownFileName}#{additionOperatorAnchor})"));
+            Assert.That(markdown, Does.Contain($"See also: [operator +](#{additionOperatorAnchor})"));
             Assert.That(markdown, Does.Contain("Raises the changed event."));
             Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));
@@ -128,12 +126,11 @@ public sealed class WriterTests
     {
         var result = await RenderMarkdownAsync();
         var markdown = result.Markdown;
-        var markdownFileName = result.MarkdownFileName;
 
         Assert.Multiple(() =>
         {
-            Assert.That(markdown, Does.Contain($"|Event| [ `Changed` ](./{markdownFileName}#changed-event)"));
-            Assert.That(markdown, Does.Contain($"|Event| [ `VisibleEvent` ](./{markdownFileName}#visibleevent-event)"));
+            Assert.That(markdown, Does.Contain("|Event| [ `Changed` ](#changed-event)"));
+            Assert.That(markdown, Does.Contain("|Event| [ `VisibleEvent` ](#visibleevent-event)"));
             Assert.That(markdown, Does.Contain("### SampleState enum"));
             Assert.That(markdown, Does.Contain("|Enum value|Description|"));
             Assert.That(markdown, Does.Contain("| `Started` | Started state. Used while processing is active. |"));
