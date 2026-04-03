@@ -25,7 +25,7 @@ Dockit の利点は、まず Markdown 形式で一度だけドキュメントを
 その後は Pandoc を使って Markdown から各種ドキュメントを生成する点にあります。  
 これにより、さまざまな出力形式を対象にできます。
 
-また、NuGet をインストールするだけで自動的にドキュメントを生成できるため、
+また、NuGet または NPM をインストールするだけで自動的にドキュメントを生成できるため、
 他の解決策よりもはるかに簡単に管理できます。
 
 ----
@@ -189,7 +189,7 @@ pandoc ./docs/MyLibrary.md -o ./docs/MyLibrary.pdf
 HTMLからの変換を行う手法として、参考にして下さい:
 
 ```bash
-pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone --filter=mermaid-filter -o ./docs/MyLibrary.html
+pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone -o ./docs/MyLibrary.html
 wkhtmltopdf -s A4 -T 23mm -B 28mm -L 20mm -R 20mm --disable-smart-shrinking --keep-relative-links --zoom 1.0 --footer-spacing 7 --footer-font-name "Noto Sans" --footer-font-size 8 --footer-left "Copyright (c) FooBar. CC-BY" --footer-right "[page]/[topage]" --outline ./docs/MyLibrary.html ./docs/MyLibrary.pdf
 ```
 

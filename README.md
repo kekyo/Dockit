@@ -29,7 +29,7 @@ and then uses Pandoc to generate the document from Markdown.
 This allows you to target a variety of output formats.
 
 It is also much simpler to manage than other solutions,
-as you simply install NuGet and it automatically generates the documentation for you.
+as you simply install via NuGet and/or NPM and it automatically generates the documentation for you.
 
 ----
 
@@ -192,7 +192,7 @@ However, since wkhtmltopdf is now deprecated, this method is no longer recommend
 Please use the following as a reference for converting HTML:
 
 ```bash
-pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone --filter=mermaid-filter -o ./docs/MyLibrary.html
+pandoc ./docs/MyLibrary.md --reference-links --reference-location=block -t html5 -c ./assets/sample.css --embed-resources --standalone -o ./docs/MyLibrary.html
 wkhtmltopdf -s A4 -T 23mm -B 28mm -L 20mm -R 20mm --disable-smart-shrinking --keep-relative-links --zoom 1.0 --footer-spacing 7 --footer-font-name "Noto Sans" --footer-font-size 8 --footer-left "Copyright (c) FooBar. CC-BY" --footer-right "[page]/[topage]" --outline ./docs/MyLibrary.html ./docs/MyLibrary.pdf
 ```
 
