@@ -26,7 +26,7 @@ public sealed class CecilUtilitiesTests
             Assert.That(fieldNames, Is.EquivalentTo(new[] { "ProtectedField", "VisibleField" }));
             Assert.That(propertyNames, Is.EquivalentTo(new[] { "ProtectedProperty", "VisibleProperty" }));
             Assert.That(eventNames, Is.EquivalentTo(new[] { "VisibleEvent" }));
-            Assert.That(methodNames, Is.EquivalentTo(new[] { "OnVisibleEvent", "ProtectedMethod", "VisibleMethod" }));
+            Assert.That(methodNames, Is.EquivalentTo(new[] { "AcceptVarArgs", "AcceptVarArgs", "OnVisibleEvent", "ProtectedMethod", "VisibleMethod" }));
         });
     }
 

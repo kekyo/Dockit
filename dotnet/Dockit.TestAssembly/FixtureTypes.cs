@@ -296,6 +296,18 @@ namespace Fixture.Root
         {
         }
 
+        /// <summary>Consumes one argument.</summary>
+        /// <param name="value">Value parameter.</param>
+        public void AcceptVarArgs(int value)
+        {
+        }
+
+        /// <summary>Consumes variable arguments.</summary>
+        /// <param name="value">Value parameter.</param>
+        public void AcceptVarArgs(int value, __arglist)
+        {
+        }
+
         /// <summary>Protected method.</summary>
         protected void ProtectedMethod()
         {

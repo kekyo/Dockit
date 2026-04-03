@@ -1,4 +1,5 @@
 using Dockit.Internal;
+using Mono.Cecil;
 using NUnit.Framework;
 using System.Collections.Generic;
 using System.Linq;
@@ -88,11 +89,16 @@ public sealed class WriterUtilitiesTests
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var visibilityType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "VisibilityContainer");
         var overloads = genericType.Methods.Where(method => method.Name == "Overload").ToArray();
+        var varArgOverloads = visibilityType.Methods.Where(method => method.Name == "AcceptVarArgs").ToArray();
 
         var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
         var overloadIdentities = overloads.
-            Select(method => identities[FullNaming.GetFullName(method)]).
+            Select(method => identities[FullNaming.GetFullSignaturedName(method)]).
+            ToArray();
+        var varArgOverloadIdentities = varArgOverloads.
+            Select(method => identities[FullNaming.GetFullSignaturedName(method)]).
             ToArray();
 
         Assert.Multiple(() =>
@@ -100,6 +106,10 @@ public sealed class WriterUtilitiesTests
             Assert.That(identities, Contains.Key(FullNaming.GetFullName(genericType)));
             Assert.That(identities, Contains.Key(DotNetXmlNaming.GetDotNetXmlName(genericType)));
             Assert.That(overloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
+            Assert.That(varArgOverloadIdentities.Distinct().ToArray(), Has.Length.EqualTo(2));
+            Assert.That(
+                DotNetXmlNaming.GetDotNetXmlName(varArgOverloads.Single(method => method.CallingConvention == MethodCallingConvention.VarArg)),
+                Does.EndWith("AcceptVarArgs(System.Int32,)"));
         });
     }
 

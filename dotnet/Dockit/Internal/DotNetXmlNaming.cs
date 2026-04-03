@@ -130,8 +130,14 @@ internal static class DotNetXmlNaming
         $"{GetDotNetXmlName(@event.DeclaringType, false)}.{@event.Name}";
 
     private static string GetDotNetXmlMethodSignature(MethodReference method) =>
-        string.Join(",", method.Parameters.
-            Select(p => GetDotNetXmlName(p.ParameterType, true)));
+        method.Parameters.Count == 0 && CecilUtilities.IsVarArgMethod(method) ?
+            string.Empty :
+            string.Join(",",
+                method.Parameters.
+                    Select(p => GetDotNetXmlName(p.ParameterType, true)).
+                    Concat(CecilUtilities.IsVarArgMethod(method) && method.Parameters.Count >= 1 ?
+                        new[] { string.Empty } :
+                        Utilities.Empty<string>()));
 
     public static string GetDotNetXmlName(MethodReference method)
     {

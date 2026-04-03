@@ -151,6 +151,9 @@ internal static class CecilUtilities
         ThenBy(Naming.GetSignaturedName).
         ToArray();
 
+    public static bool IsVarArgMethod(MethodReference method) =>
+        method.CallingConvention == MethodCallingConvention.VarArg;
+
     public static ParameterModifierCandidates GetParameterModifier(ParameterDefinition parameter) =>
         parameter.IsIn ? ParameterModifierCandidates.In :
         parameter.IsOut ? ParameterModifierCandidates.Out :

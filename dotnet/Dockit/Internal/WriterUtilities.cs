@@ -257,9 +257,11 @@ internal static class WriterUtilities
     private static async Task WriteSignatureParameterListAsync(
         TextWriter tw, MethodReference method, CancellationToken ct)
     {
+        var hasVarArg = CecilUtilities.IsVarArgMethod(method);
+
         if (method.Parameters.Count == 0)
         {
-            await tw.WriteAsync(")");
+            await tw.WriteAsync(hasVarArg ? "__arglist)" : ")");
         }
         else
         {
@@ -281,7 +283,7 @@ internal static class WriterUtilities
 
                 await WriteCustomAttributesAsync(tw, parameter, 4, ct);
 
-                if (index < method.Parameters.Count - 1)
+                if (index < method.Parameters.Count - 1 || hasVarArg)
                 {
                     await tw.WriteLineAsync(
                         $"    {preSignature}{typeName} {parameterName}{defaultValue},");
@@ -291,6 +293,11 @@ internal static class WriterUtilities
                     await tw.WriteAsync(
                         $"    {preSignature}{typeName} {parameterName}{defaultValue})");
                 }
+            }
+
+            if (hasVarArg)
+            {
+                await tw.WriteAsync("    __arglist)");
             }
         }
     }

@@ -65,6 +65,10 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("where TResult : BaseType, IMarker, new();"));
             Assert.That(markdown, Does.Contain("#### HandleMatrix() method"));
             Assert.That(markdown, Does.Contain("int[,] matrix"));
+            Assert.That(markdown, Does.Contain("#### AcceptVarArgs() method"));
+            Assert.That(markdown, Does.Contain("Consumes variable arguments."));
+            Assert.That(markdown, Does.Contain("    int value,"));
+            Assert.That(markdown, Does.Contain("    __arglist);"));
 
             Assert.That(markdown, Does.Contain("Converts a sample to a string."));
             Assert.That(markdown, Does.Contain("Raises the changed event."));

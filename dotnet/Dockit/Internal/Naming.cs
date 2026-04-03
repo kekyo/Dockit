@@ -243,8 +243,10 @@ internal static class Naming
     }
 
     private static string GetMethodSignature(MethodReference method) =>
-        string.Join(",", method.Parameters.
-            Select(p => $"{CecilUtilities.GetMethodParameterPreSignature(method, p.Index)}{GetName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {GetName(p)}"));
+        string.Join(",",
+            method.Parameters.
+                Select(p => $"{CecilUtilities.GetMethodParameterPreSignature(method, p.Index)}{GetName(p.ParameterType, CecilUtilities.GetParameterModifier(p))} {GetName(p)}").
+                Concat(CecilUtilities.IsVarArgMethod(method) ? new[] { "__arglist" } : Utilities.Empty<string>()));
 
     public static string GetSignaturedName(MethodReference method)
     {
