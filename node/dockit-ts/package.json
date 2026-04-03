@@ -1,5 +1,5 @@
 {
-  "name": "dockit-ts",
+  "name": "dockit-cli",
   "version": "0.0.0",
   "description": "Dockit TypeScript Markdown documentation generator",
   "type": "module",

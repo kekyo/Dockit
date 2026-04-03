@@ -7,7 +7,7 @@
 |Package|Link|
 |:----|:----|
 |dockit-cli (.NET CLI)|[![NuGet dockit-cli](https://img.shields.io/nuget/v/dockit-cli.svg?style=flat)](https://www.nuget.org/packages/dockit-cli)|
-|dockit-ts (NPM CLI)|[![NPM dockit-ts](https://img.shields.io/npm/v/dockit-ts.svg)](https://www.npmjs.com/package/dockit-ts)|
+|dockit-cli (NPM CLI)|[![NPM dockit-cli](https://img.shields.io/npm/v/dockit-cli.svg)](https://www.npmjs.com/package/dockit-cli)|
 
 ----
 
@@ -47,7 +47,7 @@ dotnet tool install -g dockit-cli
 `NPM` パッケージを npmjs 経由でインストールします。
 
 ```bash
-npm install -g dockit-ts
+npm install -g dockit-cli
 ```
 
 ----
@@ -148,7 +148,7 @@ CLI 指向のパッケージでは、`package.json` にカスタムエントリ�
 npm パッケージから Markdown を生成する例:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs ./path/to/package ./docs/api
+dockit-ts ./path/to/package ./docs/api
 ```
 
 これにより `./docs/api/<package-name>.md` が出力されます。
@@ -156,7 +156,7 @@ node ./node/dockit-ts/dist/cli.mjs ./path/to/package ./docs/api
 ソースファイルを `src` 配下に保持する CLI スタイルのパッケージから Markdown を生成する例:
 
 ```bash
-node ./node/dockit-ts/dist/cli.mjs --entry ./src/index.ts ./path/to/package ./docs/api
+dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
 ```
 
 ----
