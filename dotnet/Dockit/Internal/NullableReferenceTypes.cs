@@ -147,7 +147,7 @@ internal static class NullableReferenceTypes
             return name + "?";
         }
 
-        return !type.IsValueType ?
+        return !type.IsValueType && type.FullName != "System.Void" ?
             name + "?" :
             name;
     }

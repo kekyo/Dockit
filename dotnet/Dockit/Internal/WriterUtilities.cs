@@ -60,6 +60,7 @@ internal static class WriterUtilities
                 // Hides these attributes.
                 case "System.ParamArrayAttribute":
                 case "System.Runtime.CompilerServices.ExtensionAttribute":
+                case "System.Runtime.CompilerServices.CompilerGeneratedAttribute":
                 case "System.Runtime.CompilerServices.IsByRefLikeAttribute":
                 case "System.Runtime.CompilerServices.IsReadOnlyAttribute":
                 case "System.Runtime.CompilerServices.AsyncStateMachineAttribute":
@@ -100,6 +101,10 @@ internal static class WriterUtilities
             return $"[{name}{(arguments.Length >= 1 ? $"({arguments})" : "")}]";
         }).
         ToArray();
+
+    public static bool HasVisibleCustomAttributes(
+        ICustomAttributeProvider member) =>
+        GetCustomAttributeDeclarations(member).Length >= 1;
 
     public static async Task WriteCustomAttributesAsync(
         TextWriter tw, ICustomAttributeProvider member, int indent, CancellationToken ct)

@@ -378,6 +378,11 @@ internal static class CecilUtilities
     public static string GetPropertyEventModifierKeywordString(
         MethodDefinition method)
     {
+        return GetAccessibilityKeyword(method);
+    }
+
+    private static string GetAccessibilityKeyword(MethodDefinition method)
+    {
         var sb = new StringBuilder();
 
         if (method.IsPublic)
@@ -406,6 +411,40 @@ internal static class CecilUtilities
         }
 
         return sb.ToString();
+    }
+
+    private static int GetAccessibilityRank(MethodDefinition method) =>
+        method.IsPublic ? 5 :
+        method.IsFamilyOrAssembly ? 4 :
+        method.IsFamily ? 3 :
+        method.IsAssembly ? 2 :
+        method.IsFamilyAndAssembly ? 1 :
+        0;
+
+    public static string GetAggregatedPropertyModifierKeywordString(PropertyDefinition property) =>
+        new[] { GetGetter(property), GetSetter(property) }.
+        Where(method => method is not null).
+        Cast<MethodDefinition>().
+        OrderByDescending(GetAccessibilityRank).
+        Select(GetAccessibilityKeyword).
+        First();
+
+    public static string GetAggregatedEventModifierKeywordString(EventDefinition @event) =>
+        new[] { GetAdd(@event), GetRemove(@event) }.
+        Where(method => method is not null).
+        Cast<MethodDefinition>().
+        OrderByDescending(GetAccessibilityRank).
+        Select(GetAccessibilityKeyword).
+        First();
+
+    public static string GetAccessorModifierKeywordString(
+        string aggregatedModifier,
+        MethodDefinition method)
+    {
+        var modifier = GetPropertyEventModifierKeywordString(method);
+        return modifier == aggregatedModifier ?
+            string.Empty :
+            modifier + " ";
     }
 
     public static string GetModifierKeywordString(

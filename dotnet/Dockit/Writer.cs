@@ -145,19 +145,20 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, property, 0, ct);
-        await tw.WriteLineAsync($"{NullableReferenceTypes.GetName(property.PropertyType, NullableReferenceTypes.CreatePropertyContext(property))} {Naming.GetName(property, true)}");
+        var propertyModifier = CecilUtilities.GetAggregatedPropertyModifierKeywordString(property);
+        await tw.WriteLineAsync($"{propertyModifier} {NullableReferenceTypes.GetName(property.PropertyType, NullableReferenceTypes.CreatePropertyContext(property))} {Naming.GetName(property, true)}");
         await tw.WriteLineAsync("{");
         if (CecilUtilities.GetGetter(property) is { } gm)
         {
             await WriterUtilities.WriteCustomAttributesAsync(tw, gm, 4, ct);
             await tw.WriteLineAsync(
-                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(gm)} get;");
+                $"    {CecilUtilities.GetAccessorModifierKeywordString(propertyModifier, gm)}get;");
         }
         if (CecilUtilities.GetSetter(property) is { } sm)
         {
             await WriterUtilities.WriteCustomAttributesAsync(tw, sm, 4, ct);
             await tw.WriteLineAsync(
-                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(sm)} set;");
+                $"    {CecilUtilities.GetAccessorModifierKeywordString(propertyModifier, sm)}set;");
         }
         await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
@@ -200,21 +201,38 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, @event, 0, ct);
-        await tw.WriteLineAsync($"event {NullableReferenceTypes.GetName(@event.EventType, NullableReferenceTypes.CreateEventContext(@event))} {Naming.GetName(@event)}");
-        await tw.WriteLineAsync("{");
-        if (CecilUtilities.GetAdd(@event) is { } am)
+        var eventModifier = CecilUtilities.GetAggregatedEventModifierKeywordString(@event);
+        var addMethod = CecilUtilities.GetAdd(@event);
+        var removeMethod = CecilUtilities.GetRemove(@event);
+        var canSuppressAccessors =
+            new[] { addMethod, removeMethod }.
+            Where(method => method is not null).
+            Cast<MethodDefinition>().
+            All(method =>
+                !WriterUtilities.HasVisibleCustomAttributes(method) &&
+                CecilUtilities.GetPropertyEventModifierKeywordString(method) == eventModifier);
+        if (canSuppressAccessors)
         {
-            await WriterUtilities.WriteCustomAttributesAsync(tw, am, 4, ct);
-            await tw.WriteLineAsync(
-                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(am)} add;");
+            await tw.WriteLineAsync($"{eventModifier} event {NullableReferenceTypes.GetName(@event.EventType, NullableReferenceTypes.CreateEventContext(@event))} {Naming.GetName(@event)};");
         }
-        if (CecilUtilities.GetRemove(@event) is { } rm)
+        else
         {
-            await WriterUtilities.WriteCustomAttributesAsync(tw, rm, 4, ct);
-            await tw.WriteLineAsync(
-                $"    {CecilUtilities.GetPropertyEventModifierKeywordString(rm)} remove;");
+            await tw.WriteLineAsync($"{eventModifier} event {NullableReferenceTypes.GetName(@event.EventType, NullableReferenceTypes.CreateEventContext(@event))} {Naming.GetName(@event)}");
+            await tw.WriteLineAsync("{");
+            if (addMethod is { } am)
+            {
+                await WriterUtilities.WriteCustomAttributesAsync(tw, am, 4, ct);
+                await tw.WriteLineAsync(
+                    $"    {CecilUtilities.GetAccessorModifierKeywordString(eventModifier, am)}add;");
+            }
+            if (removeMethod is { } rm)
+            {
+                await WriterUtilities.WriteCustomAttributesAsync(tw, rm, 4, ct);
+                await tw.WriteLineAsync(
+                    $"    {CecilUtilities.GetAccessorModifierKeywordString(eventModifier, rm)}remove;");
+            }
+            await tw.WriteLineAsync("}");
         }
-        await tw.WriteLineAsync("}");
         await tw.WriteLineAsync("```");
 
         await WriteRemarksAsync(tw, dotNetXmlEvent, hri, markdownFileName, ct);

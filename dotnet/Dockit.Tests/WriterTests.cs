@@ -68,7 +68,15 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Raises the changed event."));
             Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));
-            Assert.That(markdown, Does.Contain("event EventHandler? Changed"));
+            Assert.That(markdown, Does.Contain("public string Name"));
+            Assert.That(markdown, Does.Contain("    get;"));
+            Assert.That(markdown, Does.Contain("    protected set;"));
+            Assert.That(markdown, Does.Not.Contain("    public get;"));
+            Assert.That(markdown, Does.Contain("public event EventHandler? Changed;"));
+            Assert.That(markdown, Does.Contain("public event EventHandler? VisibleEvent;"));
+            Assert.That(markdown, Does.Not.Contain("    public add;"));
+            Assert.That(markdown, Does.Not.Contain("    public remove;"));
+            Assert.That(markdown, Does.Not.Contain("void?"));
             Assert.That(markdown, Does.Contain("### BufferSlice ref struct"));
             Assert.That(markdown, Does.Contain("public readonly ref struct BufferSlice"));
             Assert.That(markdown, Does.Contain("### NameRecord record"));
@@ -81,6 +89,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("where TValue : BaseType, IMarker, new()"));
             Assert.That(markdown, Does.Contain("### NullableContainer class"));
             Assert.That(markdown, Does.Contain("string? OptionalName"));
+            Assert.That(markdown, Does.Contain("    get;"));
+            Assert.That(markdown, Does.Contain("    set;"));
             Assert.That(markdown, Does.Contain("Dictionary<string,string?>? CreateNullableMap("));
             Assert.That(markdown, Does.Contain("string? prefix"));
             Assert.That(markdown, Does.Contain("List<string?>? values"));
