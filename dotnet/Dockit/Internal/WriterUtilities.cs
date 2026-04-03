@@ -60,6 +60,7 @@ internal static class WriterUtilities
                 // Hides these attributes.
                 case "System.ParamArrayAttribute":
                 case "System.Runtime.CompilerServices.ExtensionAttribute":
+                case "System.Runtime.CompilerServices.IsByRefLikeAttribute":
                 case "System.Runtime.CompilerServices.IsReadOnlyAttribute":
                 case "System.Runtime.CompilerServices.AsyncStateMachineAttribute":
                 case "System.Runtime.CompilerServices.AsyncIteratorStateMachineAttribute":

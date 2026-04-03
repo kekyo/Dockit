@@ -165,6 +165,11 @@ internal static class CecilUtilities
     public static bool IsEnumType(TypeReference type) =>
         type.IsValueType && type.Resolve().IsEnum;
 
+    public static bool IsRefStructType(TypeReference type) =>
+        type.IsValueType &&
+        type.Resolve().CustomAttributes.Any(ca =>
+            ca.AttributeType.FullName == "System.Runtime.CompilerServices.IsByRefLikeAttribute");
+
     public static string GetTypeKeywordString(TypeReference type)
     {
         if (type.IsByReference)
@@ -180,6 +185,10 @@ internal static class CecilUtilities
             if (IsEnumType(type))
             {
                 return "enum";
+            }
+            else if (IsRefStructType(type))
+            {
+                return "ref struct";
             }
             else
             {

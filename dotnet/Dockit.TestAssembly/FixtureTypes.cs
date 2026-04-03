@@ -34,6 +34,18 @@ namespace Fixture.Root
     /// <typeparam name="TOutput">Delegate output type.</typeparam>
     public delegate TOutput Transformer<in TInput, out TOutput>(TInput input);
 
+    /// <summary>Represents a byref-like buffer slice.</summary>
+    public readonly ref struct BufferSlice
+    {
+        /// <summary>Gets the slice length.</summary>
+        public readonly int Length;
+
+        /// <summary>Initializes a new buffer slice.</summary>
+        /// <param name="length">Slice length.</param>
+        public BufferSlice(int length) =>
+            Length = length;
+    }
+
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>
     public class Outer<TOuter>

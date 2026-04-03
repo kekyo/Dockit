@@ -66,6 +66,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("Raises the changed event."));
             Assert.That(markdown, Does.Contain("#### Extend&lt;TItem,TValue,TResult&gt;() extension method"));
             Assert.That(markdown, Does.Contain("Extends a sample."));
+            Assert.That(markdown, Does.Contain("### BufferSlice ref struct"));
+            Assert.That(markdown, Does.Contain("public readonly ref struct BufferSlice"));
         });
     }
 
