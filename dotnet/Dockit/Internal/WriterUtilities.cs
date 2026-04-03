@@ -23,6 +23,16 @@ namespace Dockit.Internal;
 
 internal static class WriterUtilities
 {
+    private const int unmanagedMethodImplFlag = 0x0004;
+    private const int noInliningMethodImplFlag = 0x0008;
+    private const int forwardRefMethodImplFlag = 0x0010;
+    private const int synchronizedMethodImplFlag = 0x0020;
+    private const int noOptimizationMethodImplFlag = 0x0040;
+    private const int preserveSigMethodImplFlag = 0x0080;
+    private const int aggressiveInliningMethodImplFlag = 0x0100;
+    private const int aggressiveOptimizationMethodImplFlag = 0x0200;
+    private const int internalCallMethodImplFlag = 0x1000;
+
     public static string GetSectionString(int level, string text) =>
         $"{new string('#', level)} {text}";
 
@@ -100,7 +110,46 @@ internal static class WriterUtilities
 
             return $"[{name}{(arguments.Length >= 1 ? $"({arguments})" : "")}]";
         }).
+        Concat(GetSyntheticCustomAttributeDeclarations(member)).
+        Distinct().
         ToArray();
+
+    private static string[] GetSyntheticCustomAttributeDeclarations(
+        ICustomAttributeProvider member)
+    {
+        if (member is not MethodDefinition method)
+        {
+            return Utilities.Empty<string>();
+        }
+
+        var optionNames = new List<string>();
+        var implAttributes = (int)method.ImplAttributes;
+
+        static void AddIfPresent(List<string> optionNames, int implAttributes, int flag, string name)
+        {
+            if ((implAttributes & flag) == flag)
+            {
+                optionNames.Add(name);
+            }
+        }
+
+        AddIfPresent(optionNames, implAttributes, unmanagedMethodImplFlag, "Unmanaged");
+        AddIfPresent(optionNames, implAttributes, noInliningMethodImplFlag, "NoInlining");
+        AddIfPresent(optionNames, implAttributes, forwardRefMethodImplFlag, "ForwardRef");
+        AddIfPresent(optionNames, implAttributes, synchronizedMethodImplFlag, "Synchronized");
+        AddIfPresent(optionNames, implAttributes, noOptimizationMethodImplFlag, "NoOptimization");
+        if (!method.IsPInvokeImpl)
+        {
+            AddIfPresent(optionNames, implAttributes, preserveSigMethodImplFlag, "PreserveSig");
+        }
+        AddIfPresent(optionNames, implAttributes, aggressiveInliningMethodImplFlag, "AggressiveInlining");
+        AddIfPresent(optionNames, implAttributes, aggressiveOptimizationMethodImplFlag, "AggressiveOptimization");
+        AddIfPresent(optionNames, implAttributes, internalCallMethodImplFlag, "InternalCall");
+
+        return optionNames.Count >= 1 ?
+            new[] { $"[MethodImpl({string.Join(" | ", optionNames.Select(optionName => $"MethodImplOptions.{optionName}"))})]" } :
+            Utilities.Empty<string>();
+    }
 
     public static bool HasVisibleCustomAttributes(
         ICustomAttributeProvider member) =>

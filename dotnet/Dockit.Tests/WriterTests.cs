@@ -119,6 +119,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("### Transformer&lt;TInput,TOutput&gt; delegate"));
             Assert.That(markdown, Does.Contain("| `TInput` | Delegate input type. |"));
             Assert.That(markdown, Does.Contain("| `TOutput` | Delegate output type. |"));
+            Assert.That(markdown, Does.Contain("[MethodImpl(MethodImplOptions.AggressiveInlining)]"));
+            Assert.That(markdown, Does.Not.Contain("MethodImplOptions.PreserveSig"));
             Assert.That(markdown, Does.Contain("Returns text."));
             Assert.That(markdown, Does.Contain("| Static text. |"));
         });

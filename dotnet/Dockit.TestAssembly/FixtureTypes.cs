@@ -335,6 +335,7 @@ namespace Fixture.Secondary
     {
         /// <summary>Returns text.</summary>
         /// <returns>Static text.</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public string Echo() => "secondary";
     }
 }
