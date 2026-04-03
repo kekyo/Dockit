@@ -66,6 +66,24 @@ public sealed class WriterUtilitiesTests
     }
 
     [Test]
+    public void RenderReference_resolves_implicit_operator_cref_to_local_anchor()
+    {
+        using var assembly = FixtureArtifacts.ReadAssembly();
+        var genericType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSample`2");
+        var implicitOperator = genericType.Methods.Single(method => method.Name == "op_Implicit");
+        var identities = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+
+        var rendered = WriterUtilities.RenderReference(
+            XElement.Parse("""<seealso cref="M:Fixture.Root.GenericSample`2.op_Implicit(Fixture.Root.GenericSample{`0,`1})~System.String" />"""),
+            identities,
+            "fixture.md");
+
+        Assert.That(
+            rendered,
+            Is.EqualTo($" [op_Implicit](./fixture.md#{identities[DotNetXmlNaming.GetDotNetXmlName(implicitOperator)]}) "));
+    }
+
+    [Test]
     public void GeneratePandocFormedHashReferenceIdentities_creates_entries_for_xml_names_and_unique_overloads()
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
