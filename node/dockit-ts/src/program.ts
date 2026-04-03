@@ -125,13 +125,13 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
 };
 
 const writeUsage = (writer: NodeJS.WritableStream): void => {
-  writer.write(`Dockit [typescript] [${version}-${git_commit_hash}]`);
+  writer.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
   writer.write(
     'Generate Markdown documentation from a TypeScript or JavaScript npm project.\n'
   );
-  writer.write('Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)');
-  writer.write('https://github.com/kekyo/Dockit');
-  writer.write('License: Under MIT.');
+  writer.write('Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)\n');
+  writer.write('https://github.com/kekyo/Dockit\n');
+  writer.write('License: Under MIT.\n');
   writer.write('\n');
   writer.write(
     'Usage: dockit-ts [options] <project-path> <output-directory>\n'
