@@ -23,6 +23,9 @@ const here = dirname(fileURLToPath(import.meta.url));
 export const fixturePath = (name: string): string =>
   resolve(here, '..', 'fixtures', name);
 
+export const repositoryPath = (...paths: string[]): string =>
+  resolve(here, '..', '..', ...paths);
+
 export const createCapturedWritable = (): CapturedWritable => {
   const chunks: string[] = [];
 
