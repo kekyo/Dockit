@@ -72,6 +72,8 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("public record NameRecord"));
             Assert.That(markdown, Does.Contain("### ValueRecord record struct"));
             Assert.That(markdown, Does.Contain("public readonly record struct ValueRecord"));
+            Assert.That(markdown, Does.Contain("### NativeMethods class"));
+            Assert.That(markdown, Does.Contain("public static extern bool MessageBeep("));
         });
     }
 

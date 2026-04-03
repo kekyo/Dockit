@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Fixture.Root
 {
@@ -51,6 +52,16 @@ namespace Fixture.Root
 
     /// <summary>Represents a value record.</summary>
     public readonly record struct ValueRecord(int Value);
+
+    /// <summary>Provides native interop members.</summary>
+    public static class NativeMethods
+    {
+        /// <summary>Calls the native message beep API.</summary>
+        /// <param name="type">Beep type.</param>
+        /// <returns>Returns whether the API succeeded.</returns>
+        [DllImport("user32.dll", ExactSpelling = true)]
+        public static extern bool MessageBeep(uint type);
+    }
 
     /// <summary>Represents an outer generic type.</summary>
     /// <typeparam name="TOuter">Outer type parameter.</typeparam>

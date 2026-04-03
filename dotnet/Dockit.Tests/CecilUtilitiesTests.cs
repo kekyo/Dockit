@@ -41,10 +41,12 @@ public sealed class CecilUtilitiesTests
         var refStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "BufferSlice");
         var recordClassType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "NameRecord");
         var recordStructType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "ValueRecord");
+        var nativeMethodsType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "NativeMethods");
         var extensionType = FixtureArtifacts.GetTopLevelType(assembly, "Fixture.Root", "GenericSampleExtensions");
 
         var indexer = genericType.Properties.Single(property => property.Name == "Item");
         var extensionMethod = extensionType.Methods.Single(method => method.Name == "Extend");
+        var externMethod = nativeMethodsType.Methods.Single(method => method.Name == "MessageBeep");
         var referenceMethod = genericType.Methods.Single(method => method.Name == "ConsumeReferences");
 
         Assert.Multiple(() =>
@@ -59,6 +61,7 @@ public sealed class CecilUtilitiesTests
             Assert.That(CecilUtilities.GetTypeKeywordString(refStructType), Is.EqualTo("ref struct"));
             Assert.That(CecilUtilities.GetTypeKeywordString(recordClassType), Is.EqualTo("record"));
             Assert.That(CecilUtilities.GetTypeKeywordString(recordStructType), Is.EqualTo("record struct"));
+            Assert.That(CecilUtilities.GetModifierKeywordString(externMethod), Is.EqualTo("public static extern"));
 
             Assert.That(referenceMethod.Parameters[0].Name, Is.EqualTo("item"));
             Assert.That(CecilUtilities.GetParameterModifier(referenceMethod.Parameters[0]), Is.EqualTo(ParameterModifierCandidates.In));

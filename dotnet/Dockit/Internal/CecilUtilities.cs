@@ -443,6 +443,11 @@ internal static class CecilUtilities
             sb.Append(" static");
         }
 
+        if (method.IsPInvokeImpl || method.IsInternalCall)
+        {
+            sb.Append(" extern");
+        }
+
         if (method.IsAbstract)
         {
             sb.Append(" abstract");
