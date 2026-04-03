@@ -42,10 +42,15 @@ public static class Program
             return 0;
         }
 
+        if (commandLine.ShowVersion)
+        {
+            await outputWriter.WriteLineAsync(GetBanner());
+            return 0;
+        }
+
         var stopwatch = Stopwatch.StartNew();
 
-        await outputWriter.WriteLineAsync(
-            $"Dockit [{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyVersion}-{ThisAssembly.AssemblyMetadata.CommitId}]");
+        await outputWriter.WriteLineAsync(GetBanner());
 
         var assemblyPath = Path.GetFullPath(commandLine.AssemblyPath!);
         var markdownBasePath = Path.GetFullPath(commandLine.MarkdownBasePath!);
@@ -87,13 +92,18 @@ public static class Program
     private static string FormatElapsedTime(TimeSpan elapsed) =>
         $"{elapsed.TotalMilliseconds:0.000} ms";
 
+    private static string GetBanner() =>
+        $"Dockit [{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyVersion}-{ThisAssembly.AssemblyMetadata.CommitId}]";
+
     private static ParsedCommandLine ParseArguments(string[] args)
     {
         var showHelp = false;
+        var showVersion = false;
         var initialLevel = 1;
 
         var options = CreateOptionSet(
             value => showHelp = value,
+            value => showVersion = value,
             value => initialLevel = value);
 
         List<string> remainingArguments;
@@ -109,6 +119,11 @@ public static class Program
         if (showHelp)
         {
             return ParsedCommandLine.ForHelp();
+        }
+
+        if (showVersion)
+        {
+            return ParsedCommandLine.ForVersion();
         }
 
         if (remainingArguments.Count != 2)
@@ -131,8 +146,7 @@ public static class Program
 
     private static void WriteUsage(TextWriter writer)
     {
-        writer.WriteLine(
-            $"Dockit [{ThisAssembly.AssemblyMetadata.TargetFrameworkMoniker}] [{ThisAssembly.AssemblyVersion}-{ThisAssembly.AssemblyMetadata.CommitId}]");
+        writer.WriteLine(GetBanner());
         writer.WriteLine(
             "Generate Markdown documentation from a .NET assembly and its XML documentation file.");
         writer.WriteLine(
@@ -145,12 +159,14 @@ public static class Program
         writer.WriteLine("Options:");
         CreateOptionSet(
             _ => { },
+            _ => { },
             _ => { }).
             WriteOptionDescriptions(writer);
     }
 
     private static OptionSet CreateOptionSet(
         Action<bool> setShowHelp,
+        Action<bool> setShowVersion,
         Action<int> setInitialLevel) =>
         new()
         {
@@ -158,6 +174,11 @@ public static class Program
                 "h|help",
                 "Show this message and exit.",
                 value => setShowHelp(value is not null)
+            },
+            {
+                "v|version",
+                "Show version information and exit.",
+                value => setShowVersion(value is not null)
             },
             {
                 "l|initial-level=",
@@ -170,12 +191,14 @@ public static class Program
     {
         private ParsedCommandLine(
             bool showHelp,
+            bool showVersion,
             string? assemblyPath,
             string? markdownBasePath,
             int initialLevel,
             string? errorMessage)
         {
             this.ShowHelp = showHelp;
+            this.ShowVersion = showVersion;
             this.AssemblyPath = assemblyPath;
             this.MarkdownBasePath = markdownBasePath;
             this.InitialLevel = initialLevel;
@@ -183,6 +206,8 @@ public static class Program
         }
 
         public bool ShowHelp { get; }
+
+        public bool ShowVersion { get; }
 
         public string? AssemblyPath { get; }
 
@@ -193,15 +218,18 @@ public static class Program
         public string? ErrorMessage { get; }
 
         public static ParsedCommandLine ForHelp() =>
-            new(true, null, null, 1, null);
+            new(true, false, null, null, 1, null);
+
+        public static ParsedCommandLine ForVersion() =>
+            new(false, true, null, null, 1, null);
 
         public static ParsedCommandLine FromError(string errorMessage) =>
-            new(false, null, null, 1, errorMessage);
+            new(false, false, null, null, 1, errorMessage);
 
         public static ParsedCommandLine FromValues(
             string assemblyPath,
             string markdownBasePath,
             int initialLevel) =>
-            new(false, assemblyPath, markdownBasePath, initialLevel, null);
+            new(false, false, assemblyPath, markdownBasePath, initialLevel, null);
     }
 }

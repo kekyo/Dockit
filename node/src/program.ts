@@ -19,6 +19,7 @@ import { git_commit_hash, version } from './generated/packageMetadata.js';
 
 interface ParsedCommandLine {
   showHelp: boolean;
+  showVersion: boolean;
   projectPath: string | undefined;
   outputDirectory: string | undefined;
   entryPaths: readonly string[];
@@ -30,6 +31,7 @@ const createParsedCommandLine = (
   values: Partial<ParsedCommandLine>
 ): ParsedCommandLine => ({
   showHelp: values.showHelp ?? false,
+  showVersion: values.showVersion ?? false,
   projectPath: values.projectPath,
   outputDirectory: values.outputDirectory,
   entryPaths: values.entryPaths ?? [],
@@ -39,6 +41,7 @@ const createParsedCommandLine = (
 
 const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   let showHelp = false;
+  let showVersion = false;
   let initialLevel = 1;
   const entryPaths: string[] = [];
   const positionalArguments: string[] = [];
@@ -48,6 +51,11 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
 
     if (argument === '-h' || argument === '--help') {
       showHelp = true;
+      continue;
+    }
+
+    if (argument === '-v' || argument === '--version') {
+      showVersion = true;
       continue;
     }
 
@@ -105,6 +113,12 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
     });
   }
 
+  if (showVersion) {
+    return createParsedCommandLine({
+      showVersion: true,
+    });
+  }
+
   if (!Number.isInteger(initialLevel) || initialLevel < 1) {
     return createParsedCommandLine({
       errorMessage: 'Initial level must be 1 or greater.',
@@ -125,8 +139,12 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   });
 };
 
-const writeUsage = (writer: NodeJS.WritableStream): void => {
+const writeBanner = (writer: NodeJS.WritableStream): void => {
   writer.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
+};
+
+const writeUsage = (writer: NodeJS.WritableStream): void => {
+  writeBanner(writer);
   writer.write(
     'Generate Markdown documentation from a TypeScript or JavaScript npm project.\n'
   );
@@ -139,6 +157,9 @@ const writeUsage = (writer: NodeJS.WritableStream): void => {
   );
   writer.write('Options:\n');
   writer.write('  -h, --help                 Show this message and exit.\n');
+  writer.write(
+    '  -v, --version              Show version information and exit.\n'
+  );
   writer.write(
     '  -l VALUE, --initial-level=VALUE  Set the base heading level of the generated Markdown. The default is 1.\n'
   );
@@ -170,8 +191,13 @@ export const run = async (
     return 0;
   }
 
+  if (commandLine.showVersion) {
+    writeBanner(outputWriter);
+    return 0;
+  }
+
   const startedAt = performance.now();
-  outputWriter.write(`Dockit [typescript] [${version}-${git_commit_hash}]\n`);
+  writeBanner(outputWriter);
 
   try {
     const projectPath = resolve(commandLine.projectPath!);
