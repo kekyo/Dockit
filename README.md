@@ -69,6 +69,8 @@ Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+- `--scope-visibility=VALUE`: Set the minimum accessibility to include. Supported values are `public`, `protected`, `protected-internal`, `internal`, `private-protected`, and `private`. The default is `protected`.
+- `--editor-browsable-visibility=VALUE`: Set the `EditorBrowsable` visibility to include. Supported values are `normal`, `advanced`, and `always`. The default is `advanced`.
 
 Before you run it, make sure that:
 
@@ -122,6 +124,7 @@ Available options:
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
 - `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
+- `--with-metadata=PATH`: Read only the leading Markdown metadata table from the specified `package.json`.
 
 Before you run it, make sure that:
 
@@ -166,10 +169,24 @@ Output markdown: /absolute/path/to/docs/api/<package-name>.md
 Elapsed time: 123.456 ms
 ```
 
+Generated Markdown starts with a `Metadata` table.
+Dockit renders these keys from package metadata:
+`author`, `buildDate`, `description`, `git.branches`, `git.commit.date`, `git.commit.hash`, `git.commit.message`, `git.tags`, `keywords`, `license`, `main`, `module`, `name`, `type`, `types`, `version`.
+Nested metadata is flattened into dotted keys, rows are sorted in ascending key order, and array values are written as comma-separated lists.
+
+If you pass `--with-metadata`, Dockit reads only this metadata table from the specified `package.json`.
+Entry-point discovery, package analysis, and the output filename still use the target project's own `package.json`.
+
 Generate Markdown from a CLI-style package that keeps source files under `src`:
 
 ```bash
 dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
+```
+
+Generate Markdown while overriding only the metadata table source:
+
+```bash
+dockit-ts --with-metadata ./path/to/metadata/package.json ./path/to/package ./docs/api
 ```
 
 ----

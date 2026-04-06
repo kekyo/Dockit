@@ -1,7 +1,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Dockit - An automatic Markdown documentation generator, fetch from .NET XML comment/metadata.
-// Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
+// Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)
 //
 // Licensed under Apache-v2: https://opensource.org/licenses/Apache-2.0
 //
@@ -14,28 +14,130 @@ import {
   getMarkdownOutputPath,
   writeMarkdown,
 } from '../src/internal/markdown-writer.js';
+import type { PackageMetadata } from '../src/internal/package-metadata.js';
 import {
   fixturePath,
   readUtf8File,
   withTemporaryDirectory,
 } from './test-helpers.js';
 
+const createPackageMetadata = (): PackageMetadata => ({
+  value: {
+    name: 'dockit-ts-fixture',
+    version: '1.2.3',
+    description: 'Fixture package for dockit-ts.',
+    author:
+      'Kouji Matsui <koji@example.com> (https://example.com/authors/koji)',
+    license: 'MIT',
+    keywords: ['dockit', 'metadata', 'fixture'],
+    type: 'module',
+    main: './dist/index.cjs',
+    module: './dist/index.js',
+    types: './dist/index.d.ts',
+    git: {
+      tags: ['v1.2.3', 'latest'],
+      branches: ['develop', 'main'],
+      commit: {
+        hash: '0123456789abcdef0123456789abcdef01234567',
+        date: '2026-04-06T00:00:00.000Z',
+        message: 'test: update metadata table',
+      },
+    },
+    buildDate: '2026-04-06T12:34:56.000Z',
+  },
+});
+
 describe('writeMarkdown', () => {
   it('writes package metadata, module indexes, and declaration sections for TypeScript fixtures', async () => {
     const packageDocumentation = await analyzeProject(
       fixturePath('ts-project')
     );
+    const packageMetadata = createPackageMetadata();
 
     await withTemporaryDirectory(async (outputDirectory) => {
       const markdownPath = getMarkdownOutputPath(
         outputDirectory,
         packageDocumentation.packageName
       );
-      await writeMarkdown(markdownPath, packageDocumentation, 1);
+      await writeMarkdown(
+        markdownPath,
+        packageDocumentation,
+        packageMetadata,
+        1
+      );
       const markdown = await readUtf8File(markdownPath);
 
       expect(markdown).toContain('# dockit-ts-fixture package');
-      expect(markdown).toContain('| `PackageVersion` | &quot;1.2.3&quot; |');
+      expect(markdown).toContain('| `name` | &quot;dockit-ts-fixture&quot; |');
+      expect(markdown).toContain('| `version` | &quot;1.2.3&quot; |');
+      expect(markdown).toContain(
+        '| `description` | &quot;Fixture package for dockit-ts.&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `author` | &quot;Kouji Matsui &lt;koji@example.com&gt; (https://example.com/authors/koji)&quot; |'
+      );
+      expect(markdown).toContain('| `license` | &quot;MIT&quot; |');
+      expect(markdown).toContain(
+        '| `keywords` | &quot;dockit&quot;, &quot;metadata&quot;, &quot;fixture&quot; |'
+      );
+      expect(markdown).toContain('| `type` | &quot;module&quot; |');
+      expect(markdown).toContain('| `main` | &quot;./dist/index.cjs&quot; |');
+      expect(markdown).toContain('| `module` | &quot;./dist/index.js&quot; |');
+      expect(markdown).toContain('| `types` | &quot;./dist/index.d.ts&quot; |');
+      expect(markdown).toContain(
+        '| `git.tags` | &quot;v1.2.3&quot;, &quot;latest&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `git.branches` | &quot;develop&quot;, &quot;main&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `git.commit.hash` | &quot;0123456789abcdef0123456789abcdef01234567&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `git.commit.date` | &quot;2026-04-06T00:00:00.000Z&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `git.commit.message` | &quot;test: update metadata table&quot; |'
+      );
+      expect(markdown).toContain(
+        '| `buildDate` | &quot;2026-04-06T12:34:56.000Z&quot; |'
+      );
+
+      const authorIndex = markdown.indexOf('| `author` |');
+      const buildDateIndex = markdown.indexOf('| `buildDate` |');
+      const descriptionIndex = markdown.indexOf('| `description` |');
+      const gitBranchesIndex = markdown.indexOf('| `git.branches` |');
+      const gitCommitDateIndex = markdown.indexOf('| `git.commit.date` |');
+      const gitCommitHashIndex = markdown.indexOf('| `git.commit.hash` |');
+      const gitCommitMessageIndex = markdown.indexOf(
+        '| `git.commit.message` |'
+      );
+      const gitTagsIndex = markdown.indexOf('| `git.tags` |');
+      const keywordsIndex = markdown.indexOf('| `keywords` |');
+      const licenseIndex = markdown.indexOf('| `license` |');
+      const mainIndex = markdown.indexOf('| `main` |');
+      const moduleIndex = markdown.indexOf('| `module` |');
+      const nameIndex = markdown.indexOf('| `name` |');
+      const typeIndex = markdown.indexOf('| `type` |');
+      const typesIndex = markdown.indexOf('| `types` |');
+      const versionIndex = markdown.indexOf('| `version` |');
+
+      expect(authorIndex).toBeLessThan(buildDateIndex);
+      expect(buildDateIndex).toBeLessThan(descriptionIndex);
+      expect(descriptionIndex).toBeLessThan(gitBranchesIndex);
+      expect(gitBranchesIndex).toBeLessThan(gitCommitDateIndex);
+      expect(gitCommitDateIndex).toBeLessThan(gitCommitHashIndex);
+      expect(gitCommitHashIndex).toBeLessThan(gitCommitMessageIndex);
+      expect(gitCommitMessageIndex).toBeLessThan(gitTagsIndex);
+      expect(gitTagsIndex).toBeLessThan(keywordsIndex);
+      expect(keywordsIndex).toBeLessThan(licenseIndex);
+      expect(licenseIndex).toBeLessThan(mainIndex);
+      expect(mainIndex).toBeLessThan(moduleIndex);
+      expect(moduleIndex).toBeLessThan(nameIndex);
+      expect(nameIndex).toBeLessThan(typeIndex);
+      expect(typeIndex).toBeLessThan(typesIndex);
+      expect(typesIndex).toBeLessThan(versionIndex);
+
       expect(markdown).toContain('| [ `.` ](#root-module) |');
       expect(markdown).toContain('| [ `./extras` ](#extras-module) |');
       expect(markdown).toContain(
@@ -117,10 +219,16 @@ describe('writeMarkdown', () => {
     const packageDocumentation = await analyzeProject(
       fixturePath('js-project')
     );
+    const packageMetadata = createPackageMetadata();
 
     await withTemporaryDirectory(async (outputDirectory) => {
       const markdownPath = join(outputDirectory, 'dockit-js-fixture.md');
-      await writeMarkdown(markdownPath, packageDocumentation, 1);
+      await writeMarkdown(
+        markdownPath,
+        packageDocumentation,
+        packageMetadata,
+        1
+      );
       const markdown = await readUtf8File(markdownPath);
 
       expect(markdown).toContain('# dockit-js-fixture package');

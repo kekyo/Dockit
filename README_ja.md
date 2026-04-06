@@ -66,6 +66,8 @@ dockit-dotnet [options] <assembly-path> <output-directory>
 
 - `-h`, `--help`: 使い方を表示します。
 - `-l VALUE`, `--initial-level=VALUE`: 生成される Markdown の見出し開始レベルを設定します。デフォルトは `1` です。
+- `--scope-visibility=VALUE`: 生成対象に含める最小アクセシビリティを設定します。指定できる値は `public`、`protected`、`protected-internal`、`internal`、`private-protected`、`private` です。デフォルトは `protected` です。
+- `--editor-browsable-visibility=VALUE`: 生成対象に含める `EditorBrowsable` 可視性を設定します。指定できる値は `normal`、`advanced`、`always` です。デフォルトは `advanced` です。
 
 実行前に、以下を確認してください。
 
@@ -119,6 +121,7 @@ dockit-ts [options] <project-path> <output-directory>
 - `-h`, `--help`: 使い方を表示します。
 - `-l VALUE`, `--initial-level=VALUE`: 生成される Markdown の見出し開始レベルを設定します。デフォルトは `1` です。
 - `-e VALUE`, `--entry=VALUE`: ソースのエントリポイントを追加します。複数回指定できます。
+- `--with-metadata=PATH`: 生成される Markdown 先頭の Metadata 表だけ、指定した `package.json` から読み取ります。
 
 実行前に、以下を確認してください。
 
@@ -163,10 +166,23 @@ Output markdown: /absolute/path/to/docs/api/<package-name>.md
 Elapsed time: 123.456 ms
 ```
 
+生成された Markdown の先頭には `Metadata` 表が出力されます。
+Dockit はパッケージメタデータと Git 情報から、`author`, `buildDate`, `description`, `git.branches`, `git.commit.date`, `git.commit.hash`, `git.commit.message`, `git.tags`, `keywords`, `license`, `main`, `module`, `name`, `type`, `types`, `version` を出力します。
+階層を持つメタデータはドット区切りのキーに平坦化され、行はキー名の昇順で並び、配列値はカンマ区切りで出力されます。
+
+`--with-metadata` を指定した場合でも、差し替わるのはこの Metadata 表の参照元だけです。
+エントリポイント探索、パッケージ解析、出力ファイル名の決定には、従来通り対象プロジェクト自身の `package.json` が使われます。
+
 ソースファイルを `src` 配下に保持する CLI スタイルのパッケージから Markdown を生成する例:
 
 ```bash
 dockit-ts --entry ./src/index.ts ./path/to/package ./docs/api
+```
+
+Metadata 表だけ別の `package.json` を参照して生成する例:
+
+```bash
+dockit-ts --with-metadata ./path/to/metadata/package.json ./path/to/package ./docs/api
 ```
 
 ----

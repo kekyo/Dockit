@@ -46,6 +46,8 @@ public sealed class ProgramTests
             Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
             Assert.That(outputWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
             Assert.That(outputWriter.ToString(), Does.Contain("--initial-level"));
+            Assert.That(outputWriter.ToString(), Does.Contain("--scope-visibility"));
+            Assert.That(outputWriter.ToString(), Does.Contain("--editor-browsable-visibility"));
         });
     }
 
@@ -92,7 +94,7 @@ public sealed class ProgramTests
     }
 
     [Test]
-    public async Task RunAsync_parses_initial_level_option_and_generates_markdown()
+    public async Task RunAsync_parses_visibility_options_and_generates_markdown()
     {
         using var outputWriter = new StringWriter();
         using var errorWriter = new StringWriter();
@@ -108,6 +110,8 @@ public sealed class ProgramTests
                 new[]
                 {
                     "--initial-level=2",
+                    "--scope-visibility=internal",
+                    "--editor-browsable-visibility=always",
                     FixtureArtifacts.AssemblyPath,
                     outputDirectory,
                 },
@@ -136,6 +140,9 @@ public sealed class ProgramTests
                     Does.Match(@"(?m)^Elapsed time: \d+\.\d{3} ms$"));
                 Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
                 Assert.That(markdown, Does.StartWith("## Dockit.TestAssembly assembly"));
+                Assert.That(markdown, Does.Contain("### InternalOnlyType class"));
+                Assert.That(markdown, Does.Contain("#### HiddenByEditorBrowsableField field"));
+                Assert.That(markdown, Does.Contain("#### HiddenMethod() method"));
             });
         }
         finally
@@ -168,6 +175,56 @@ public sealed class ProgramTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
             Assert.That(errorWriter.ToString(), Does.Contain("Initial level must be 1 or greater."));
+            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_returns_error_when_visibility_option_is_invalid()
+    {
+        using var outputWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+
+        var exitCode = await Program.RunAsync(
+            new[]
+            {
+                "--scope-visibility=package-private",
+                FixtureArtifacts.AssemblyPath,
+                TestContext.CurrentContext.WorkDirectory,
+            },
+            outputWriter,
+            errorWriter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
+            Assert.That(errorWriter.ToString(), Does.Contain("Invalid value for --scope-visibility"));
+            Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
+        });
+    }
+
+    [Test]
+    public async Task RunAsync_returns_error_when_editor_browsable_visibility_option_is_invalid()
+    {
+        using var outputWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+
+        var exitCode = await Program.RunAsync(
+            new[]
+            {
+                "--editor-browsable-visibility=never",
+                FixtureArtifacts.AssemblyPath,
+                TestContext.CurrentContext.WorkDirectory,
+            },
+            outputWriter,
+            errorWriter);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(outputWriter.ToString(), Is.EqualTo(string.Empty));
+            Assert.That(errorWriter.ToString(), Does.Contain("Invalid value for --editor-browsable-visibility"));
             Assert.That(errorWriter.ToString(), Does.Contain("Usage: dockit-dotnet [options] <assembly-path> <output-directory>"));
         });
     }

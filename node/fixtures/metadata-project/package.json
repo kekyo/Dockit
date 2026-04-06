@@ -1,0 +1,20 @@
+{
+  "name": "dockit-metadata-fixture",
+  "version": "9.8.7",
+  "description": "Fixture metadata package for dockit-ts.",
+  "author": {
+    "name": "Fixture Author",
+    "email": "fixture@example.com",
+    "url": "https://example.com/fixture-author"
+  },
+  "license": "Apache-2.0",
+  "keywords": [
+    "dockit",
+    "metadata",
+    "override"
+  ],
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts"
+}

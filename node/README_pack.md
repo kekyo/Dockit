@@ -53,6 +53,7 @@ Available options:
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
 - `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
+- `--with-metadata=PATH`: Read only the leading Markdown metadata table from the specified `package.json`.
 
 Generate Markdown from an npm package:
 

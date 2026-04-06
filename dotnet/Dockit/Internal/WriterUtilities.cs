@@ -1,7 +1,7 @@
 ﻿/////////////////////////////////////////////////////////////////////////////////////////////////
 //
 // Dockit - An automatic Markdown documentation generator, fetch from .NET XML comment/metadata.
-// Copyright (c) Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)
+// Copyright (c) Kouji Matsui (@kekyo@mi.kekyo.net)
 //
 // Licensed under Apache-v2: https://opensource.org/licenses/Apache-2.0
 //
@@ -420,7 +420,14 @@ internal static class WriterUtilities
     }
 
     public static IReadOnlyDictionary<string, string> GeneratePandocFormedHashReferenceIdentities(
-        AssemblyDefinition assembly)
+        AssemblyDefinition assembly) =>
+        GeneratePandocFormedHashReferenceIdentities(
+            assembly,
+            DocumentationVisibilityOptions.Default);
+
+    public static IReadOnlyDictionary<string, string> GeneratePandocFormedHashReferenceIdentities(
+        AssemblyDefinition assembly,
+        DocumentationVisibilityOptions options)
     {
         var results = new Dictionary<string, string>();
         var producedCount = new Dictionary<string, int>();
@@ -464,7 +471,7 @@ internal static class WriterUtilities
         // Sequential scan flow and the order are important.
 
         var namespaces =
-            CecilUtilities.GetTypes(assembly.MainModule).
+            CecilUtilities.GetTypes(assembly.MainModule, options).
             Select(t => t.Namespace).
             Distinct().
             OrderBy(ns => ns).
@@ -477,7 +484,7 @@ internal static class WriterUtilities
                 null,
                 $"{@namespace} namespace");
 
-            var types = CecilUtilities.GetTypes(assembly.MainModule).
+            var types = CecilUtilities.GetTypes(assembly.MainModule, options).
                 Where(t => t.Namespace == @namespace).
                 ToArray();
 
@@ -488,7 +495,7 @@ internal static class WriterUtilities
                     DotNetXmlNaming.GetDotNetXmlName(type),
                     $"{Naming.GetName(type)} {CecilUtilities.GetTypeKeywordString(type)}");
 
-                foreach (var field in CecilUtilities.GetFields(type))
+                foreach (var field in CecilUtilities.GetFields(type, options))
                 {
                     AddHashReference(
                         FullNaming.GetFullName(field),
@@ -496,15 +503,15 @@ internal static class WriterUtilities
                         $"{Naming.GetName(field)} field");
                 }
 
-                foreach (var property in CecilUtilities.GetProperties(type))
+                foreach (var property in CecilUtilities.GetProperties(type, options))
                 {
                     AddHashReference(
                         FullNaming.GetFullName(property),
                         DotNetXmlNaming.GetDotNetXmlName(property),
-                        $"{Naming.GetName(property)} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}");
+                        $"{Naming.GetName(property)} {(CecilUtilities.IsIndexer(property, options) ? "indexer" : "property")}");
                 }
 
-                foreach (var @event in CecilUtilities.GetEvents(type))
+                foreach (var @event in CecilUtilities.GetEvents(type, options))
                 {
                     var dotNetXmlEventName = DotNetXmlNaming.GetDotNetXmlName(@event);
                     AddHashReference(
@@ -513,7 +520,7 @@ internal static class WriterUtilities
                         $"{Naming.GetName(@event)} event");
                 }
 
-                foreach (var method in CecilUtilities.GetMethods(type))
+                foreach (var method in CecilUtilities.GetMethods(type, options))
                 {
                     var dotNetXmlMethodName = DotNetXmlNaming.GetDotNetXmlName(method);
                     AddHashReference(

@@ -22,8 +22,8 @@
     <Copyright>Copyright (c) Kouji Matsui</Copyright>
     <Description>An automatic Markdown documentation generator, fetch from .NET XML comment/metadata.</Description>
 
-    <Company>Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)</Company>
-    <Authors>Kouji Matsui (@kozy_kekyo, @kekyo@mastodon.cloud)</Authors>
+    <Company>Kouji Matsui (@kekyo@mi.kekyo.net)</Company>
+    <Authors>Kouji Matsui (@kekyo@mi.kekyo.net)</Authors>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageProjectUrl>https://github.com/kekyo/Dockit.git</PackageProjectUrl>
     <PackageIcon>Dockit.100.png</PackageIcon>

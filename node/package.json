@@ -2,6 +2,21 @@
   "name": "dockit-cli",
   "version": "0.0.0",
   "description": "Dockit TypeScript Markdown documentation generator",
+  "author": {
+    "name": "Kouji Matsui",
+    "url": "https://github.com/kekyo/"
+  },
+  "keywords": [
+    "typescript",
+    "jsdoc",
+    "markdown",
+    "pandoc",
+    "html",
+    "pdf"
+  ],
+  "homepage": "https://github.com/kekyo/Dockit/",
+  "license": "Apache-2.0",
+  "readme": "README_pack.md",
   "type": "module",
   "bin": {
     "dockit-ts": "./dist/cli.mjs"
@@ -10,7 +25,6 @@
     "dist",
     "LICENSE"
   ],
-  "readme": "README_pack.md",
   "engines": {
     "node": ">=20"
   },
