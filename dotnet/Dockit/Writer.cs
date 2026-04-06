@@ -121,6 +121,7 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         PropertyDefinition property,
         int initialLevel,
+        DocumentationVisibilityOptions visibilityOptions,
         IReadOnlyDictionary<string, string> hri,
         string markdownFileName,
         CancellationToken ct)
@@ -128,7 +129,7 @@ internal static class Writer
         await WriteSectionAsync(
             tw,
             initialLevel + 3,
-            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property) ? "indexer" : "property")}",
+            $"{WriterUtilities.EscapeSpecialCharacters(Naming.GetName(property))} {(CecilUtilities.IsIndexer(property, visibilityOptions) ? "indexer" : "property")}",
             hri.TryGetValue(FullNaming.GetFullName(property), out var anchor) ? anchor : null,
             ct);
 
@@ -149,16 +150,16 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, property, 0, ct);
-        var propertyModifier = CecilUtilities.GetAggregatedPropertyModifierKeywordString(property);
+        var propertyModifier = CecilUtilities.GetAggregatedPropertyModifierKeywordString(property, visibilityOptions);
         await tw.WriteLineAsync($"{propertyModifier} {NullableReferenceTypes.GetName(property.PropertyType, NullableReferenceTypes.CreatePropertyContext(property))} {Naming.GetName(property, true)}");
         await tw.WriteLineAsync("{");
-        if (CecilUtilities.GetGetter(property) is { } gm)
+        if (CecilUtilities.GetGetter(property, visibilityOptions) is { } gm)
         {
             await WriterUtilities.WriteCustomAttributesAsync(tw, gm, 4, ct);
             await tw.WriteLineAsync(
                 $"    {CecilUtilities.GetAccessorModifierKeywordString(propertyModifier, gm)}get;");
         }
-        if (CecilUtilities.GetSetter(property) is { } sm)
+        if (CecilUtilities.GetSetter(property, visibilityOptions) is { } sm)
         {
             await WriterUtilities.WriteCustomAttributesAsync(tw, sm, 4, ct);
             await tw.WriteLineAsync(
@@ -177,6 +178,7 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         EventDefinition @event,
         int initialLevel,
+        DocumentationVisibilityOptions visibilityOptions,
         IReadOnlyDictionary<string, string> hri,
         string markdownFileName,
         CancellationToken ct)
@@ -205,9 +207,9 @@ internal static class Writer
         await tw.WriteLineAsync();
         await tw.WriteLineAsync("```csharp");
         await WriterUtilities.WriteCustomAttributesAsync(tw, @event, 0, ct);
-        var eventModifier = CecilUtilities.GetAggregatedEventModifierKeywordString(@event);
-        var addMethod = CecilUtilities.GetAdd(@event);
-        var removeMethod = CecilUtilities.GetRemove(@event);
+        var eventModifier = CecilUtilities.GetAggregatedEventModifierKeywordString(@event, visibilityOptions);
+        var addMethod = CecilUtilities.GetAdd(@event, visibilityOptions);
+        var removeMethod = CecilUtilities.GetRemove(@event, visibilityOptions);
         var canSuppressAccessors =
             new[] { addMethod, removeMethod }.
             Where(method => method is not null).
@@ -388,13 +390,15 @@ internal static class Writer
         public readonly MethodDefinition[] Methods;
         public readonly MemberReference[] OverallMembers;
 
-        public VisibleMembers(TypeDefinition type)
+        public VisibleMembers(
+            TypeDefinition type,
+            DocumentationVisibilityOptions visibilityOptions)
         {
             var ems = new HashSet<MethodReference>();
 
-            this.Fields = CecilUtilities.GetFields(type);
+            this.Fields = CecilUtilities.GetFields(type, visibilityOptions);
 
-            this.Properties = CecilUtilities.GetProperties(type);
+            this.Properties = CecilUtilities.GetProperties(type, visibilityOptions);
             foreach (var property in this.Properties)
             {
                 if (property.GetMethod is { } gm)
@@ -407,7 +411,7 @@ internal static class Writer
                 }
             }
 
-            this.Events = CecilUtilities.GetEvents(type);
+            this.Events = CecilUtilities.GetEvents(type, visibilityOptions);
             foreach (var @event in this.Events)
             {
                 if (@event.AddMethod is { } am)
@@ -420,7 +424,7 @@ internal static class Writer
                 }
             }
 
-            this.Methods = CecilUtilities.GetMethods(type).
+            this.Methods = CecilUtilities.GetMethods(type, visibilityOptions).
                 Where(m => !ems.Contains(m)).
                 ToArray();
 
@@ -441,6 +445,7 @@ internal static class Writer
         TypeDefinition type,
         int initialLevel,
         VisibleMembers visibleMembers,
+        DocumentationVisibilityOptions visibilityOptions,
         IReadOnlyDictionary<string, string> hri,
         string markdownFileName,
         CancellationToken ct)
@@ -495,7 +500,7 @@ internal static class Writer
             await tw.WriteLineAsync("|Enum value|Description|");
             await tw.WriteLineAsync("|:----|:----|");
 
-            foreach (var field in CecilUtilities.GetFields(type).
+            foreach (var field in CecilUtilities.GetFields(type, visibilityOptions).
                 Where(f => f.IsLiteral).
                 OrderBy(f => f.Constant))
             {
@@ -684,7 +689,15 @@ internal static class Writer
             foreach (var property in visibleMembers.Properties)
             {
                 await tw.WriteLineAsync();
-                await WritePropertyAsync(tw, dotNetDocument, property, initialLevel, hri, markdownFileName, ct);
+                await WritePropertyAsync(
+                    tw,
+                    dotNetDocument,
+                    property,
+                    initialLevel,
+                    visibilityOptions,
+                    hri,
+                    markdownFileName,
+                    ct);
             }
 
             /////////////////////////////////////////////////////////
@@ -693,7 +706,15 @@ internal static class Writer
             foreach (var @event in visibleMembers.Events)
             {
                 await tw.WriteLineAsync();
-                await WriteEventAsync(tw, dotNetDocument, @event, initialLevel, hri, markdownFileName, ct);
+                await WriteEventAsync(
+                    tw,
+                    dotNetDocument,
+                    @event,
+                    initialLevel,
+                    visibilityOptions,
+                    hri,
+                    markdownFileName,
+                    ct);
             }
 
             /////////////////////////////////////////////////////////
@@ -715,6 +736,7 @@ internal static class Writer
         AssemblyDefinition assembly,
         string @namespace,
         int initialLevel,
+        DocumentationVisibilityOptions visibilityOptions,
         IReadOnlyDictionary<string, string> hri,
         string markdownFileName,
         CancellationToken ct)
@@ -729,7 +751,7 @@ internal static class Writer
         /////////////////////////////////////////////////////////
         // Type index table.
 
-        var types = CecilUtilities.GetTypes(assembly.MainModule).
+        var types = CecilUtilities.GetTypes(assembly.MainModule, visibilityOptions).
             Where(t => t.Namespace == @namespace).
             ToArray();
 
@@ -740,7 +762,7 @@ internal static class Writer
         var membersByType = new Dictionary<TypeReference, VisibleMembers>();
         foreach (var type in types)
         {
-            var visibleMembers = new VisibleMembers(type);
+            var visibleMembers = new VisibleMembers(type, visibilityOptions);
 
             var members = visibleMembers.OverallMembers;
             var isEnum = CecilUtilities.IsEnumType(type);
@@ -771,17 +793,32 @@ internal static class Writer
         {
             await tw.WriteLineAsync();
             await WriteTypeAsync(
-                tw, dotNetDocument, type, initialLevel, membersByType[type], hri, markdownFileName, ct);
+                tw, dotNetDocument, type, initialLevel, membersByType[type], visibilityOptions, hri, markdownFileName, ct);
         }
     }
 
     //////////////////////////////////////////////////////////////////////////
+
+    public static Task WriteMarkdownAsync(
+        string markdownPath,
+        AssemblyDefinition assembly,
+        DotNetXmlDocument dotNetDocument,
+        int initialLevel,
+        CancellationToken ct) =>
+        WriteMarkdownAsync(
+            markdownPath,
+            assembly,
+            dotNetDocument,
+            initialLevel,
+            DocumentationVisibilityOptions.Default,
+            ct);
 
     public static async Task WriteMarkdownAsync(
         string markdownPath,
         AssemblyDefinition assembly,
         DotNetXmlDocument dotNetDocument,
         int initialLevel,
+        DocumentationVisibilityOptions visibilityOptions,
         CancellationToken ct)
     {
         if (assembly.Name.Name != dotNetDocument.AssemblyName)
@@ -834,13 +871,13 @@ internal static class Writer
         /////////////////////////////////////////////////////////
         // Retrieve hash reference identities.
 
-        var hri = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly);
+        var hri = WriterUtilities.GeneratePandocFormedHashReferenceIdentities(assembly, visibilityOptions);
         var markdownFileName = Path.GetFileName(markdownPath);
 
         /////////////////////////////////////////////////////////
         // Examine namespaces.
 
-        var allTypes = CecilUtilities.GetTypes(assembly.MainModule);
+        var allTypes = CecilUtilities.GetTypes(assembly.MainModule, visibilityOptions);
         var namespaces =
             allTypes.
             Select(t => t.Namespace).
@@ -878,7 +915,7 @@ internal static class Writer
         {
             await tw.WriteLineAsync();
             await WriteNamespaceAsync(
-                tw, dotNetDocument, assembly, @namespace, initialLevel, hri, markdownFileName, ct);
+                tw, dotNetDocument, assembly, @namespace, initialLevel, visibilityOptions, hri, markdownFileName, ct);
         }
 
         await tw.FlushAsync();

@@ -280,6 +280,16 @@ namespace Fixture.Root
         [EditorBrowsable(EditorBrowsableState.Never)]
         public int HiddenByEditorBrowsableField;
 
+        /// <summary>Visible only for advanced editor browsing.</summary>
+        [EditorBrowsable(EditorBrowsableState.Advanced)]
+        public int AdvancedEditorBrowsableField;
+
+        /// <summary>Private protected field.</summary>
+        private protected int PrivateProtectedField;
+
+        /// <summary>Private field.</summary>
+        private int PrivateField;
+
         /// <summary>Visible property.</summary>
         public int VisibleProperty { get; set; }
 
@@ -293,11 +303,23 @@ namespace Fixture.Root
         /// <summary>Hidden property.</summary>
         internal int HiddenProperty { get; set; }
 
+        /// <summary>Private protected property.</summary>
+        private protected int PrivateProtectedProperty { get; set; }
+
+        /// <summary>Private property.</summary>
+        private int PrivateProperty { get; set; }
+
         /// <summary>Visible event.</summary>
         public event EventHandler? VisibleEvent;
 
         /// <summary>Hidden event.</summary>
         internal event EventHandler? HiddenEvent;
+
+        /// <summary>Private protected event.</summary>
+        private protected event EventHandler? PrivateProtectedEvent;
+
+        /// <summary>Private event.</summary>
+        private event EventHandler? PrivateEvent;
 
         /// <summary>Visible method.</summary>
         [EditorBrowsable(EditorBrowsableState.Always)]
@@ -327,10 +349,30 @@ namespace Fixture.Root
         {
         }
 
+        /// <summary>Private protected method.</summary>
+        private protected void PrivateProtectedMethod()
+        {
+            PrivateProtectedField++;
+            _ = PrivateProtectedProperty;
+            OnPrivateProtectedEvent();
+        }
+
+        /// <summary>Private method.</summary>
+        private void PrivateMethod()
+        {
+            PrivateField++;
+            _ = PrivateProperty;
+            OnPrivateEvent();
+        }
+
         /// <summary>Raises the visible event.</summary>
         protected virtual void OnVisibleEvent() => VisibleEvent?.Invoke(this, EventArgs.Empty);
 
         internal void OnHiddenEvent() => HiddenEvent?.Invoke(this, EventArgs.Empty);
+
+        private protected void OnPrivateProtectedEvent() => PrivateProtectedEvent?.Invoke(this, EventArgs.Empty);
+
+        private void OnPrivateEvent() => PrivateEvent?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>Provides extension members.</summary>
@@ -351,6 +393,13 @@ namespace Fixture.Root
 
 namespace Fixture.Secondary
 {
+    /// <summary>Represents an internal-only type.</summary>
+    internal class InternalOnlyType
+    {
+        /// <summary>Returns internal text.</summary>
+        public string Echo() => "internal";
+    }
+
     /// <summary>Represents another namespace type.</summary>
     public class SecondaryType
     {

@@ -55,6 +55,7 @@ public static class Program
         var assemblyPath = Path.GetFullPath(commandLine.AssemblyPath!);
         var markdownBasePath = Path.GetFullPath(commandLine.MarkdownBasePath!);
         var initialLevel = commandLine.InitialLevel;
+        var visibilityOptions = commandLine.VisibilityOptions;
 
         var referenceBasePath = Path.GetDirectoryName(assemblyPath)!;
 
@@ -77,7 +78,7 @@ public static class Program
         // Write markdown.
 
         await Writer.WriteMarkdownAsync(
-            markdownPath, assembly, dotNetDocument, initialLevel,
+            markdownPath, assembly, dotNetDocument, initialLevel, visibilityOptions,
             default);
 
         await outputWriter.WriteLineAsync($"Converted .NET --> Markdown");
@@ -100,11 +101,15 @@ public static class Program
         var showHelp = false;
         var showVersion = false;
         var initialLevel = 1;
+        var visibility = DocumentationAccessibility.Protected;
+        var editorBrowsableVisibility = DocumentationEditorBrowsableVisibility.Advanced;
 
         var options = CreateOptionSet(
             value => showHelp = value,
             value => showVersion = value,
-            value => initialLevel = value);
+            value => initialLevel = value,
+            value => visibility = value,
+            value => editorBrowsableVisibility = value);
 
         List<string> remainingArguments;
         try
@@ -141,7 +146,8 @@ public static class Program
         return ParsedCommandLine.FromValues(
             remainingArguments[0],
             remainingArguments[1],
-            initialLevel);
+            initialLevel,
+            new(visibility, editorBrowsableVisibility));
     }
 
     private static void WriteUsage(TextWriter writer)
@@ -160,6 +166,8 @@ public static class Program
         CreateOptionSet(
             _ => { },
             _ => { },
+            _ => { },
+            _ => { },
             _ => { }).
             WriteOptionDescriptions(writer);
     }
@@ -167,7 +175,9 @@ public static class Program
     private static OptionSet CreateOptionSet(
         Action<bool> setShowHelp,
         Action<bool> setShowVersion,
-        Action<int> setInitialLevel) =>
+        Action<int> setInitialLevel,
+        Action<DocumentationAccessibility> setVisibility,
+        Action<DocumentationEditorBrowsableVisibility> setEditorBrowsableVisibility) =>
         new()
         {
             {
@@ -185,6 +195,42 @@ public static class Program
                 "Set the base heading level of the generated Markdown. The default is 1.",
                 (int value) => setInitialLevel(value)
             },
+            {
+                "scope-visibility=",
+                "Set the minimum accessibility to include: public, protected, protected-internal, internal, private-protected, private. The default is protected.",
+                (string value) => setVisibility(ParseAccessibility(value))
+            },
+            {
+                "editor-browsable-visibility=",
+                "Set the EditorBrowsable visibility to include: normal, advanced, always. The default is advanced.",
+                (string value) => setEditorBrowsableVisibility(ParseEditorBrowsableVisibility(value))
+            },
+        };
+
+    private static DocumentationAccessibility ParseAccessibility(string value) =>
+        value switch
+        {
+            "public" => DocumentationAccessibility.Public,
+            "protected-internal" => DocumentationAccessibility.ProtectedInternal,
+            "protected" => DocumentationAccessibility.Protected,
+            "internal" => DocumentationAccessibility.Internal,
+            "private-protected" => DocumentationAccessibility.PrivateProtected,
+            "private" => DocumentationAccessibility.Private,
+            _ => throw new OptionException(
+                $"Invalid value for --scope-visibility: '{value}'. Expected public, protected, protected-internal, internal, private-protected, or private.",
+                "scope-visibility"),
+        };
+
+    private static DocumentationEditorBrowsableVisibility ParseEditorBrowsableVisibility(
+        string value) =>
+        value switch
+        {
+            "normal" => DocumentationEditorBrowsableVisibility.Normal,
+            "advanced" => DocumentationEditorBrowsableVisibility.Advanced,
+            "always" => DocumentationEditorBrowsableVisibility.Always,
+            _ => throw new OptionException(
+                $"Invalid value for --editor-browsable-visibility: '{value}'. Expected normal, advanced, or always.",
+                "editor-browsable-visibility"),
         };
 
     private sealed class ParsedCommandLine
@@ -195,6 +241,7 @@ public static class Program
             string? assemblyPath,
             string? markdownBasePath,
             int initialLevel,
+            DocumentationVisibilityOptions visibilityOptions,
             string? errorMessage)
         {
             this.ShowHelp = showHelp;
@@ -202,6 +249,7 @@ public static class Program
             this.AssemblyPath = assemblyPath;
             this.MarkdownBasePath = markdownBasePath;
             this.InitialLevel = initialLevel;
+            this.VisibilityOptions = visibilityOptions;
             this.ErrorMessage = errorMessage;
         }
 
@@ -215,21 +263,24 @@ public static class Program
 
         public int InitialLevel { get; }
 
+        public DocumentationVisibilityOptions VisibilityOptions { get; }
+
         public string? ErrorMessage { get; }
 
         public static ParsedCommandLine ForHelp() =>
-            new(true, false, null, null, 1, null);
+            new(true, false, null, null, 1, DocumentationVisibilityOptions.Default, null);
 
         public static ParsedCommandLine ForVersion() =>
-            new(false, true, null, null, 1, null);
+            new(false, true, null, null, 1, DocumentationVisibilityOptions.Default, null);
 
         public static ParsedCommandLine FromError(string errorMessage) =>
-            new(false, false, null, null, 1, errorMessage);
+            new(false, false, null, null, 1, DocumentationVisibilityOptions.Default, errorMessage);
 
         public static ParsedCommandLine FromValues(
             string assemblyPath,
             string markdownBasePath,
-            int initialLevel) =>
-            new(false, false, assemblyPath, markdownBasePath, initialLevel, null);
+            int initialLevel,
+            DocumentationVisibilityOptions visibilityOptions) =>
+            new(false, false, assemblyPath, markdownBasePath, initialLevel, visibilityOptions, null);
     }
 }

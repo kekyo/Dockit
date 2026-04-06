@@ -21,65 +21,229 @@ namespace Dockit.Internal;
 
 internal static class CecilUtilities
 {
-    private static bool IsVisibleByEditorBrowsable(ICustomAttributeProvider member)
+    private const string EditorBrowsableAttributeFullName =
+        "System.ComponentModel.EditorBrowsableAttribute";
+    private const string CompilerGeneratedAttributeFullName =
+        "System.Runtime.CompilerServices.CompilerGeneratedAttribute";
+
+    private static EditorBrowsableState? GetEditorBrowsableState(
+        ICustomAttributeProvider provider)
     {
-        foreach (var ca in member.CustomAttributes)
+        foreach (var ca in provider.CustomAttributes)
         {
-            if (ca.AttributeType.FullName == "System.ComponentModel.EditorBrowsableAttribute")
+            if (ca.AttributeType.FullName == EditorBrowsableAttributeFullName &&
+                ca.ConstructorArguments.FirstOrDefault() is { Value: { } value })
             {
-                if (ca.ConstructorArguments.FirstOrDefault() is { } caa0 &&
-                    caa0.Value is { } caa0v)
+                switch (value)
                 {
-                    if (caa0v.Equals(EditorBrowsableState.Never) || caa0v.Equals(1))
-                    {
-                        return false;
-                    }
+                    case EditorBrowsableState state:
+                        return state;
+                    case int rawValue when Enum.IsDefined(typeof(EditorBrowsableState), rawValue):
+                        return (EditorBrowsableState)rawValue;
                 }
             }
         }
-        return true;
+
+        return null;
     }
 
+    private static IEnumerable<ICustomAttributeProvider> EnumerateTypeChain(TypeDefinition? type)
+    {
+        for (var current = type; current is not null; current = current.DeclaringType)
+        {
+            yield return current;
+        }
+    }
+
+    private static IEnumerable<ICustomAttributeProvider> EnumerateEditorBrowsableProviders(
+        TypeDefinition type)
+    {
+        foreach (var provider in EnumerateTypeChain(type))
+        {
+            yield return provider;
+        }
+
+        yield return type.Module;
+        yield return type.Module.Assembly;
+    }
+
+    private static IEnumerable<ICustomAttributeProvider> EnumerateEditorBrowsableProviders(
+        IMemberDefinition member)
+    {
+        yield return member;
+
+        foreach (var provider in EnumerateTypeChain(member.DeclaringType))
+        {
+            yield return provider;
+        }
+
+        yield return member.DeclaringType.Module;
+        yield return member.DeclaringType.Module.Assembly;
+    }
+
+    private static EditorBrowsableState? ResolveEditorBrowsableState(
+        IEnumerable<ICustomAttributeProvider> providers)
+    {
+        foreach (var provider in providers)
+        {
+            if (GetEditorBrowsableState(provider) is { } state)
+            {
+                return state;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsVisibleByEditorBrowsable(
+        EditorBrowsableState? state,
+        DocumentationEditorBrowsableVisibility visibility) =>
+        visibility switch
+        {
+            DocumentationEditorBrowsableVisibility.Always => true,
+            DocumentationEditorBrowsableVisibility.Advanced =>
+                state is not EditorBrowsableState.Never,
+            DocumentationEditorBrowsableVisibility.Normal =>
+                state is not EditorBrowsableState.Never &&
+                state is not EditorBrowsableState.Advanced,
+            _ => throw new InvalidOperationException(),
+        };
+
+    private static bool IsVisibleByEditorBrowsable(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
+        IsVisibleByEditorBrowsable(
+            ResolveEditorBrowsableState(EnumerateEditorBrowsableProviders(type)),
+            options.EditorBrowsableVisibility);
+
+    private static bool IsVisibleByEditorBrowsable(
+        IMemberDefinition member,
+        DocumentationVisibilityOptions options) =>
+        IsVisibleByEditorBrowsable(
+            ResolveEditorBrowsableState(EnumerateEditorBrowsableProviders(member)),
+            options.EditorBrowsableVisibility);
+
+    public static DocumentationAccessibility GetAccessibility(TypeDefinition type) =>
+        (type.IsPublic || type.IsNestedPublic) ? DocumentationAccessibility.Public :
+        (type.IsNotPublic || type.IsNestedAssembly) ? DocumentationAccessibility.Internal :
+        type.IsNestedFamily ? DocumentationAccessibility.Protected :
+        type.IsNestedFamilyOrAssembly ? DocumentationAccessibility.ProtectedInternal :
+        type.IsNestedFamilyAndAssembly ? DocumentationAccessibility.PrivateProtected :
+        DocumentationAccessibility.Private;
+
+    public static DocumentationAccessibility GetAccessibility(FieldDefinition field) =>
+        field.IsPublic ? DocumentationAccessibility.Public :
+        field.IsAssembly ? DocumentationAccessibility.Internal :
+        field.IsFamily ? DocumentationAccessibility.Protected :
+        field.IsFamilyOrAssembly ? DocumentationAccessibility.ProtectedInternal :
+        field.IsFamilyAndAssembly ? DocumentationAccessibility.PrivateProtected :
+        DocumentationAccessibility.Private;
+
+    public static DocumentationAccessibility GetAccessibility(MethodDefinition method) =>
+        method.IsPublic ? DocumentationAccessibility.Public :
+        method.IsAssembly ? DocumentationAccessibility.Internal :
+        method.IsFamily ? DocumentationAccessibility.Protected :
+        method.IsFamilyOrAssembly ? DocumentationAccessibility.ProtectedInternal :
+        method.IsFamilyAndAssembly ? DocumentationAccessibility.PrivateProtected :
+        DocumentationAccessibility.Private;
+
+    private static bool IsAccessible(
+        DocumentationAccessibility accessibility,
+        DocumentationVisibilityOptions options) =>
+        accessibility >= options.Accessibility;
+
+    private static MethodDefinition? GetVisibleAccessor(
+        MethodDefinition? method,
+        DocumentationVisibilityOptions options) =>
+        method is { } candidate &&
+        IsAccessible(GetAccessibility(candidate), options) ?
+            candidate :
+            null;
+
     public static bool IsVisible(TypeDefinition type) =>
-        (type.IsPublic || type.IsNestedPublic || type.IsNestedFamily || type.IsNestedFamilyOrAssembly) &&
-        IsVisibleByEditorBrowsable(type);
+        IsVisible(type, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
+        IsAccessible(GetAccessibility(type), options) &&
+        IsVisibleByEditorBrowsable(type, options);
 
     public static bool IsVisible(FieldDefinition field) =>
-        (field.IsPublic || field.IsFamily || field.IsFamilyOrAssembly) &&
-        IsVisibleByEditorBrowsable(field);
+        IsVisible(field, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        FieldDefinition field,
+        DocumentationVisibilityOptions options) =>
+        IsAccessible(GetAccessibility(field), options) &&
+        IsVisibleByEditorBrowsable(field, options);
 
     public static bool IsVisible(PropertyDefinition property) =>
-        (GetGetter(property) is { } || GetSetter(property) is { }) &&
-        IsVisibleByEditorBrowsable(property);
+        IsVisible(property, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options) =>
+        (GetGetter(property, options) is { } || GetSetter(property, options) is { }) &&
+        IsVisibleByEditorBrowsable(property, options);
 
     public static bool IsVisible(EventDefinition @event) =>
-        (GetAdd(@event) is { } || GetRemove(@event) is { }) &&
-        IsVisibleByEditorBrowsable(@event);
+        IsVisible(@event, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        EventDefinition @event,
+        DocumentationVisibilityOptions options) =>
+        (GetAdd(@event, options) is { } || GetRemove(@event, options) is { }) &&
+        IsVisibleByEditorBrowsable(@event, options);
 
     public static bool IsVisible(MethodDefinition method) =>
-        (method.IsPublic || method.IsFamily || method.IsFamilyOrAssembly) &&
-        IsVisibleByEditorBrowsable(method);
+        IsVisible(method, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        MethodDefinition method,
+        DocumentationVisibilityOptions options) =>
+        IsAccessible(GetAccessibility(method), options) &&
+        IsVisibleByEditorBrowsable(method, options);
 
     public static bool IsVisible(MemberReference member) =>
+        IsVisible(member, DocumentationVisibilityOptions.Default);
+
+    public static bool IsVisible(
+        MemberReference member,
+        DocumentationVisibilityOptions options) =>
         member.Resolve() switch
         {
-            TypeDefinition t => IsVisible(t),
-            FieldDefinition f => IsVisible(f),
-            PropertyDefinition p => IsVisible(p),
-            EventDefinition e => IsVisible(e),
-            MethodDefinition m => IsVisible(m),
+            TypeDefinition t => IsVisible(t, options),
+            FieldDefinition f => IsVisible(f, options),
+            PropertyDefinition p => IsVisible(p, options),
+            EventDefinition e => IsVisible(e, options),
+            MethodDefinition m => IsVisible(m, options),
             { } m => throw new InvalidOperationException(),
         };
 
     public static TypeDefinition[] GetTypes(ModuleDefinition module) =>
+        GetTypes(module, DocumentationVisibilityOptions.Default);
+
+    public static TypeDefinition[] GetTypes(
+        ModuleDefinition module,
+        DocumentationVisibilityOptions options) =>
         module.Types.
-        Where(IsVisible).
+        Where(type => IsVisible(type, options)).
         OrderBy(t => Naming.GetName(t)).
         ToArray();
 
     public static FieldDefinition[] GetFields(TypeDefinition type) =>
+        GetFields(type, DocumentationVisibilityOptions.Default);
+
+    public static FieldDefinition[] GetFields(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
         type.Fields.
-        Where(IsVisible).
+        Where(field =>
+            !field.IsSpecialName &&
+            !field.CustomAttributes.Any(ca =>
+                ca.AttributeType.FullName == CompilerGeneratedAttributeFullName)).
+        Where(field => IsVisible(field, options)).
         OrderBy(Naming.GetName).
         ToArray();
 
@@ -104,28 +268,53 @@ internal static class CecilUtilities
         string.Empty;
 
     public static MethodDefinition? GetGetter(PropertyDefinition property) =>
-        property.GetMethod is { } gm && IsVisible(gm) ? gm : null;
+        GetGetter(property, DocumentationVisibilityOptions.Default);
+
+    public static MethodDefinition? GetGetter(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options) =>
+        GetVisibleAccessor(property.GetMethod, options);
 
     public static MethodDefinition? GetSetter(PropertyDefinition property) =>
-        property.SetMethod is { } sm && IsVisible(sm) ? sm : null;
+        GetSetter(property, DocumentationVisibilityOptions.Default);
+
+    public static MethodDefinition? GetSetter(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options) =>
+        GetVisibleAccessor(property.SetMethod, options);
 
     public static PropertyDefinition[] GetProperties(TypeDefinition type) =>
+        GetProperties(type, DocumentationVisibilityOptions.Default);
+
+    public static PropertyDefinition[] GetProperties(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
         type.Properties.
-        Where(IsVisible).
+        Where(property => IsVisible(property, options)).
         OrderBy(p => Naming.GetName(p)).
         ToArray();
 
-    public static bool IsIndexer(PropertyDefinition property)
+    public static bool IsIndexer(PropertyDefinition property) =>
+        IsIndexer(property, DocumentationVisibilityOptions.Default);
+
+    public static bool IsIndexer(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options)
     {
-        var gm = GetGetter(property);
-        var sm = GetSetter(property);
+        var gm = GetGetter(property, options);
+        var sm = GetSetter(property, options);
         return gm?.Parameters.Count >= 1 || sm?.Parameters.Count >= 2;
     }
 
-    public static ParameterDefinition[] GetIndexerParameters(PropertyDefinition property)
+    public static ParameterDefinition[] GetIndexerParameters(PropertyDefinition property) =>
+        GetIndexerParameters(property, DocumentationVisibilityOptions.Default);
+
+    public static ParameterDefinition[] GetIndexerParameters(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options)
     {
-        var gm = GetGetter(property);
-        var sm = GetSetter(property);
+        var gm = GetGetter(property, options);
+        var sm = GetSetter(property, options);
         return (gm?.Parameters.ToArray() ??
                 sm?.Parameters.Skip(1).ToArray() ??
                 Utilities.Empty<ParameterDefinition>()).
@@ -133,20 +322,40 @@ internal static class CecilUtilities
     }
 
     public static MethodDefinition? GetAdd(EventDefinition @event) =>
-       @event.AddMethod is { } am && IsVisible(am) ? am : null;
+        GetAdd(@event, DocumentationVisibilityOptions.Default);
+
+    public static MethodDefinition? GetAdd(
+        EventDefinition @event,
+        DocumentationVisibilityOptions options) =>
+        GetVisibleAccessor(@event.AddMethod, options);
 
     public static MethodDefinition? GetRemove(EventDefinition @event) =>
-        @event.RemoveMethod is { } rm && IsVisible(rm) ? rm : null;
+        GetRemove(@event, DocumentationVisibilityOptions.Default);
+
+    public static MethodDefinition? GetRemove(
+        EventDefinition @event,
+        DocumentationVisibilityOptions options) =>
+        GetVisibleAccessor(@event.RemoveMethod, options);
 
     public static EventDefinition[] GetEvents(TypeDefinition type) =>
+        GetEvents(type, DocumentationVisibilityOptions.Default);
+
+    public static EventDefinition[] GetEvents(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
         type.Events.
-        Where(e => GetAdd(e) is { } || GetRemove(e) is { }).
+        Where(@event => GetAdd(@event, options) is { } || GetRemove(@event, options) is { }).
         OrderBy(Naming.GetName).
         ToArray();
 
     public static MethodDefinition[] GetMethods(TypeDefinition type) =>
+        GetMethods(type, DocumentationVisibilityOptions.Default);
+
+    public static MethodDefinition[] GetMethods(
+        TypeDefinition type,
+        DocumentationVisibilityOptions options) =>
         type.Methods.
-        Where(IsVisible).
+        Where(method => IsVisible(method, options)).
         OrderBy(m => m.IsConstructor).
         ThenBy(Naming.GetSignaturedName).
         ToArray();
@@ -276,31 +485,7 @@ internal static class CecilUtilities
         TypeDefinition type, bool storageModifier = true)
     {
         var sb = new StringBuilder();
-
-        if (type.IsPublic || type.IsNestedPublic)
-        {
-            sb.Append("public");
-        }
-        else if (type.IsNotPublic || type.IsNestedAssembly)
-        {
-            sb.Append("internal");
-        }
-        else if (type.IsNestedFamily)
-        {
-            sb.Append("protected");
-        }
-        else if (type.IsNestedFamilyOrAssembly)
-        {
-            sb.Append("protected internal");
-        }
-        else if (type.IsNestedFamilyAndAssembly)
-        {
-            sb.Append("private protected");
-        }
-        else if (type.IsNestedPrivate)
-        {
-            sb.Append("private");
-        }
+        sb.Append(GetAccessibilityKeyword(GetAccessibility(type)));
 
         if (storageModifier)
         {
@@ -333,31 +518,7 @@ internal static class CecilUtilities
         FieldDefinition field)
     {
         var sb = new StringBuilder();
-
-        if (field.IsPublic)
-        {
-            sb.Append("public");
-        }
-        else if (field.IsAssembly)
-        {
-            sb.Append("internal");
-        }
-        else if (field.IsFamily)
-        {
-            sb.Append("protected");
-        }
-        else if (field.IsFamilyOrAssembly)
-        {
-            sb.Append("protected internal");
-        }
-        else if (field.IsFamilyAndAssembly)
-        {
-            sb.Append("private protected");
-        }
-        else
-        {
-            sb.Append("private");
-        }
+        sb.Append(GetAccessibilityKeyword(GetAccessibility(field)));
 
         if (field.IsLiteral)
         {
@@ -380,64 +541,49 @@ internal static class CecilUtilities
 
     public static string GetPropertyEventModifierKeywordString(
         MethodDefinition method)
-    {
-        return GetAccessibilityKeyword(method);
-    }
+        => GetAccessibilityKeyword(GetAccessibility(method));
 
-    private static string GetAccessibilityKeyword(MethodDefinition method)
-    {
-        var sb = new StringBuilder();
-
-        if (method.IsPublic)
+    private static string GetAccessibilityKeyword(
+        DocumentationAccessibility accessibility) =>
+        accessibility switch
         {
-            sb.Append("public");
-        }
-        else if (method.IsAssembly)
-        {
-            sb.Append("internal");
-        }
-        else if (method.IsFamily)
-        {
-            sb.Append("protected");
-        }
-        else if (method.IsFamilyOrAssembly)
-        {
-            sb.Append("protected internal");
-        }
-        else if (method.IsFamilyAndAssembly)
-        {
-            sb.Append("private protected");
-        }
-        else
-        {
-            sb.Append("private");
-        }
-
-        return sb.ToString();
-    }
-
-    private static int GetAccessibilityRank(MethodDefinition method) =>
-        method.IsPublic ? 5 :
-        method.IsFamilyOrAssembly ? 4 :
-        method.IsFamily ? 3 :
-        method.IsAssembly ? 2 :
-        method.IsFamilyAndAssembly ? 1 :
-        0;
+            DocumentationAccessibility.Public => "public",
+            DocumentationAccessibility.ProtectedInternal => "protected internal",
+            DocumentationAccessibility.Protected => "protected",
+            DocumentationAccessibility.Internal => "internal",
+            DocumentationAccessibility.PrivateProtected => "private protected",
+            DocumentationAccessibility.Private => "private",
+            _ => throw new InvalidOperationException(),
+        };
 
     public static string GetAggregatedPropertyModifierKeywordString(PropertyDefinition property) =>
-        new[] { GetGetter(property), GetSetter(property) }.
+        GetAggregatedPropertyModifierKeywordString(
+            property,
+            DocumentationVisibilityOptions.Default);
+
+    public static string GetAggregatedPropertyModifierKeywordString(
+        PropertyDefinition property,
+        DocumentationVisibilityOptions options) =>
+        new[] { GetGetter(property, options), GetSetter(property, options) }.
         Where(method => method is not null).
         Cast<MethodDefinition>().
-        OrderByDescending(GetAccessibilityRank).
-        Select(GetAccessibilityKeyword).
+        OrderByDescending(GetAccessibility).
+        Select(GetPropertyEventModifierKeywordString).
         First();
 
     public static string GetAggregatedEventModifierKeywordString(EventDefinition @event) =>
-        new[] { GetAdd(@event), GetRemove(@event) }.
+        GetAggregatedEventModifierKeywordString(
+            @event,
+            DocumentationVisibilityOptions.Default);
+
+    public static string GetAggregatedEventModifierKeywordString(
+        EventDefinition @event,
+        DocumentationVisibilityOptions options) =>
+        new[] { GetAdd(@event, options), GetRemove(@event, options) }.
         Where(method => method is not null).
         Cast<MethodDefinition>().
-        OrderByDescending(GetAccessibilityRank).
-        Select(GetAccessibilityKeyword).
+        OrderByDescending(GetAccessibility).
+        Select(GetPropertyEventModifierKeywordString).
         First();
 
     public static string GetAccessorModifierKeywordString(
@@ -454,31 +600,7 @@ internal static class CecilUtilities
         MethodDefinition method)
     {
         var sb = new StringBuilder();
-
-        if (method.IsPublic)
-        {
-            sb.Append("public");
-        }
-        else if (method.IsAssembly)
-        {
-            sb.Append("internal");
-        }
-        else if (method.IsFamily)
-        {
-            sb.Append("protected");
-        }
-        else if (method.IsFamilyOrAssembly)
-        {
-            sb.Append("protected internal");
-        }
-        else if (method.IsFamilyAndAssembly)
-        {
-            sb.Append("private protected");
-        }
-        else
-        {
-            sb.Append("private");
-        }
+        sb.Append(GetAccessibilityKeyword(GetAccessibility(method)));
 
         if (method.IsStatic)
         {

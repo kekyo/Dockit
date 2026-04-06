@@ -145,6 +145,37 @@ public sealed class WriterTests
     }
 
     [Test]
+    public async Task WriteMarkdownAsync_honors_visibility_options()
+    {
+        var internalResult = await RenderMarkdownAsync(
+            new(
+                DocumentationAccessibility.Internal,
+                DocumentationEditorBrowsableVisibility.Advanced));
+        var normalResult = await RenderMarkdownAsync(
+            new(
+                DocumentationAccessibility.Internal,
+                DocumentationEditorBrowsableVisibility.Normal));
+        var alwaysResult = await RenderMarkdownAsync(
+            new(
+                DocumentationAccessibility.Internal,
+                DocumentationEditorBrowsableVisibility.Always));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(internalResult.Markdown, Does.Contain("### InternalOnlyType class"));
+            Assert.That(internalResult.Markdown, Does.Contain("#### HiddenMethod() method"));
+            Assert.That(internalResult.Markdown, Does.Not.Contain("HiddenByEditorBrowsableField"));
+            Assert.That(internalResult.Markdown, Does.Contain("AdvancedEditorBrowsableField"));
+
+            Assert.That(normalResult.Markdown, Does.Not.Contain("AdvancedEditorBrowsableField"));
+
+            Assert.That(alwaysResult.Markdown, Does.Contain("#### HiddenByEditorBrowsableField field"));
+            Assert.That(alwaysResult.Markdown, Does.Contain("internal int HiddenField"));
+            Assert.That(alwaysResult.Markdown, Does.Contain("| [ `InternalOnlyType` ](#internalonlytype-class) |"));
+        });
+    }
+
+    [Test]
     public async Task WriteMarkdownAsync_returns_without_output_when_assembly_name_does_not_match()
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
@@ -176,7 +207,8 @@ public sealed class WriterTests
         }
     }
 
-    private static async Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync()
+    private static async Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync(
+        DocumentationVisibilityOptions? visibilityOptions = null)
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var document = await FixtureArtifacts.LoadDocumentAsync();
@@ -189,7 +221,13 @@ public sealed class WriterTests
 
         try
         {
-            await Writer.WriteMarkdownAsync(path, assembly, document, 1, CancellationToken.None);
+            await Writer.WriteMarkdownAsync(
+                path,
+                assembly,
+                document,
+                1,
+                visibilityOptions ?? DocumentationVisibilityOptions.Default,
+                CancellationToken.None);
             return (await File.ReadAllTextAsync(path), Path.GetFileName(path));
         }
         finally

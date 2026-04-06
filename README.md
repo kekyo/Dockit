@@ -69,6 +69,8 @@ Available options:
 
 - `-h`, `--help`: Show usage help.
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
+- `--scope-visibility=VALUE`: Set the minimum accessibility to include. Supported values are `public`, `protected`, `protected-internal`, `internal`, `private-protected`, and `private`. The default is `protected`.
+- `--editor-browsable-visibility=VALUE`: Set the `EditorBrowsable` visibility to include. Supported values are `normal`, `advanced`, and `always`. The default is `advanced`.
 
 Before you run it, make sure that:
 
