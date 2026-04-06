@@ -16,6 +16,12 @@ import type {
   ModuleDocumentation,
   PackageDocumentation,
 } from './models.js';
+import type {
+  PackageMetadata,
+  PackageMetadataNode,
+  PackageMetadataObject,
+  PackageMetadataScalar,
+} from './package-metadata.js';
 import {
   escapeMarkdownText,
   normalizeInlineText,
@@ -207,6 +213,45 @@ const renderSignatureBlock = (
   lines.push('```');
 };
 
+const renderMetadataValue = (value: PackageMetadataScalar): string => {
+  if (value === undefined) {
+    return '';
+  }
+
+  const renderScalar = (entry: string): string =>
+    `&quot;${escapeMarkdownText(normalizeInlineText(entry))}&quot;`;
+
+  if (typeof value === 'string') {
+    return renderScalar(value);
+  }
+
+  return value.map((entry) => renderScalar(entry)).join(', ');
+};
+
+interface FlattenedMetadataEntry {
+  key: string;
+  value: PackageMetadataScalar;
+}
+
+const isPackageMetadataObject = (
+  value: PackageMetadataNode
+): value is PackageMetadataObject =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const flattenPackageMetadata = (
+  metadataObject: PackageMetadataObject,
+  prefix: string | undefined
+): readonly FlattenedMetadataEntry[] =>
+  Object.keys(metadataObject)
+    .sort((left, right) => left.localeCompare(right))
+    .flatMap((key) => {
+      const dottedKey = prefix === undefined ? key : `${prefix}.${key}`;
+      const value = metadataObject[key];
+      return isPackageMetadataObject(value)
+        ? flattenPackageMetadata(value, dottedKey)
+        : [{ key: dottedKey, value }];
+    });
+
 const renderMemberIndex = (
   lines: string[],
   declaration: DeclarationDocumentation,
@@ -360,10 +405,16 @@ export const getMarkdownOutputPath = (
 
 /**
  * Writes package documentation to a Dockit-style Markdown file.
+ *
+ * @param markdownPath Output Markdown file path.
+ * @param packageDocumentation Extracted API documentation model.
+ * @param packageMetadata Package metadata rows rendered ahead of the API sections.
+ * @param initialLevel Base heading level for the generated Markdown.
  */
 export const writeMarkdown = async (
   markdownPath: string,
   packageDocumentation: PackageDocumentation,
+  packageMetadata: PackageMetadata,
   initialLevel: number
 ): Promise<void> => {
   const anchors = createAnchorMaps(packageDocumentation);
@@ -376,17 +427,13 @@ export const writeMarkdown = async (
   lines.push('');
   lines.push('|Metadata|Value|');
   lines.push('|:----|:----|');
-  lines.push(
-    `| \`PackageVersion\` | ${
-      packageDocumentation.packageVersion === undefined
-        ? ''
-        : `&quot;${escapeMarkdownText(packageDocumentation.packageVersion)}&quot;`
-    } |`
-  );
-  if (packageDocumentation.packageDescription !== undefined) {
+  for (const entry of flattenPackageMetadata(
+    packageMetadata.value,
+    undefined
+  )) {
     lines.push(
-      `| \`PackageDescription\` | ${escapeMarkdownText(
-        normalizeInlineText(packageDocumentation.packageDescription)
+      `| \`${escapeMarkdownText(entry.key)}\` | ${renderMetadataValue(
+        entry.value
       )} |`
     );
   }

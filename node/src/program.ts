@@ -15,6 +15,7 @@ import {
   getMarkdownOutputPath,
   writeMarkdown,
 } from './internal/markdown-writer.js';
+import { loadPackageMetadata } from './internal/package-metadata.js';
 import { git_commit_hash, version } from './generated/packageMetadata.js';
 
 interface ParsedCommandLine {
@@ -22,6 +23,7 @@ interface ParsedCommandLine {
   showVersion: boolean;
   projectPath: string | undefined;
   outputDirectory: string | undefined;
+  metadataPackageJsonPath: string | undefined;
   entryPaths: readonly string[];
   initialLevel: number;
   errorMessage: string | undefined;
@@ -34,6 +36,7 @@ const createParsedCommandLine = (
   showVersion: values.showVersion ?? false,
   projectPath: values.projectPath,
   outputDirectory: values.outputDirectory,
+  metadataPackageJsonPath: values.metadataPackageJsonPath,
   entryPaths: values.entryPaths ?? [],
   initialLevel: values.initialLevel ?? 1,
   errorMessage: values.errorMessage,
@@ -43,6 +46,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   let showHelp = false;
   let showVersion = false;
   let initialLevel = 1;
+  let metadataPackageJsonPath: string | undefined;
   const entryPaths: string[] = [];
   const positionalArguments: string[] = [];
 
@@ -96,6 +100,23 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
       continue;
     }
 
+    if (argument === '--with-metadata') {
+      const value = args[index + 1];
+      if (value === undefined) {
+        return createParsedCommandLine({
+          errorMessage: 'Missing value for --with-metadata.',
+        });
+      }
+      metadataPackageJsonPath = value;
+      index += 1;
+      continue;
+    }
+
+    if (argument.startsWith('--with-metadata=')) {
+      metadataPackageJsonPath = argument.slice('--with-metadata='.length);
+      continue;
+    }
+
     if (argument.startsWith('-')) {
       return createParsedCommandLine({
         errorMessage: `Unknown option: ${argument}`,
@@ -108,6 +129,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   if (showHelp) {
     return createParsedCommandLine({
       showHelp: true,
+      metadataPackageJsonPath,
       entryPaths,
       initialLevel,
     });
@@ -134,6 +156,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   return createParsedCommandLine({
     projectPath: positionalArguments[0],
     outputDirectory: positionalArguments[1],
+    metadataPackageJsonPath,
     entryPaths,
     initialLevel,
   });
@@ -165,6 +188,9 @@ const writeUsage = (writer: NodeJS.WritableStream): void => {
   );
   writer.write(
     '  -e VALUE, --entry=VALUE    Add a source entry point. Can be specified multiple times.\n'
+  );
+  writer.write(
+    '  --with-metadata=PATH       Read only the metadata table from the specified package.json file.\n'
   );
 };
 
@@ -204,6 +230,9 @@ export const run = async (
     const packageDocumentation = await analyzeProject(projectPath, {
       entryPaths: commandLine.entryPaths,
     });
+    const packageMetadata = await loadPackageMetadata(projectPath, {
+      packageJsonPath: commandLine.metadataPackageJsonPath,
+    });
     const outputDirectory = resolve(commandLine.outputDirectory!);
     const markdownPath = getMarkdownOutputPath(
       outputDirectory,
@@ -214,6 +243,7 @@ export const run = async (
     await writeMarkdown(
       markdownPath,
       packageDocumentation,
+      packageMetadata,
       commandLine.initialLevel
     );
 
