@@ -26,6 +26,7 @@ interface ParsedCommandLine {
   metadataPackageJsonPath: string | undefined;
   entryPaths: readonly string[];
   initialLevel: number;
+  includeHashLinks: boolean;
   errorMessage: string | undefined;
 }
 
@@ -39,6 +40,7 @@ const createParsedCommandLine = (
   metadataPackageJsonPath: values.metadataPackageJsonPath,
   entryPaths: values.entryPaths ?? [],
   initialLevel: values.initialLevel ?? 1,
+  includeHashLinks: values.includeHashLinks ?? true,
   errorMessage: values.errorMessage,
 });
 
@@ -47,6 +49,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
   let showVersion = false;
   let initialLevel = 1;
   let metadataPackageJsonPath: string | undefined;
+  let includeHashLinks = true;
   const entryPaths: string[] = [];
   const positionalArguments: string[] = [];
 
@@ -117,6 +120,11 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
       continue;
     }
 
+    if (argument === '--no-hash-link') {
+      includeHashLinks = false;
+      continue;
+    }
+
     if (argument.startsWith('-')) {
       return createParsedCommandLine({
         errorMessage: `Unknown option: ${argument}`,
@@ -132,6 +140,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
       metadataPackageJsonPath,
       entryPaths,
       initialLevel,
+      includeHashLinks,
     });
   }
 
@@ -159,6 +168,7 @@ const parseArguments = (args: readonly string[]): ParsedCommandLine => {
     metadataPackageJsonPath,
     entryPaths,
     initialLevel,
+    includeHashLinks,
   });
 };
 
@@ -191,6 +201,9 @@ const writeUsage = (writer: NodeJS.WritableStream): void => {
   );
   writer.write(
     '  --with-metadata=PATH       Read only the metadata table from the specified package.json file.\n'
+  );
+  writer.write(
+    '  --no-hash-link            Do not emit local hash links to other items in the generated Markdown.\n'
   );
 };
 
@@ -244,7 +257,8 @@ export const run = async (
       markdownPath,
       packageDocumentation,
       packageMetadata,
-      commandLine.initialLevel
+      commandLine.initialLevel,
+      commandLine.includeHashLinks
     );
 
     outputWriter.write('Converted TypeScript --> Markdown\n');
