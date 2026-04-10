@@ -67,6 +67,23 @@ public sealed class WriterUtilitiesTests
     }
 
     [Test]
+    public void RenderReference_renders_local_cref_without_hash_link_when_disabled()
+    {
+        var element = XElement.Parse("""<seealso cref="P:Fixture.Root.GenericSample`2.Name" />""");
+
+        var rendered = WriterUtilities.RenderReference(
+            element,
+            new Dictionary<string, string>
+            {
+                ["Fixture.Root.GenericSample`2.Name"] = "name-property",
+            },
+            "fixture.md",
+            false);
+
+        Assert.That(rendered, Is.EqualTo(" Name "));
+    }
+
+    [Test]
     public void RenderReference_resolves_implicit_operator_cref_to_local_anchor()
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
@@ -102,6 +119,30 @@ public sealed class WriterUtilitiesTests
         Assert.That(
             rendered,
             Is.EqualTo($" [operator +](#{identities[DotNetXmlNaming.GetDotNetXmlName(additionOperator)]}) "));
+    }
+
+    [Test]
+    public void RenderDotNetXmlElement_renders_local_reference_without_hash_link_when_disabled()
+    {
+        var element = XElement.Parse(
+            """
+            <remarks>
+              See <see cref="T:Fixture.Root.VisibilityContainer">VisibilityContainer</see>.
+            </remarks>
+            """);
+
+        var rendered = WriterUtilities.RenderDotNetXmlElement(
+            element,
+            false,
+            new Dictionary<string, string>
+            {
+                ["Fixture.Root.VisibilityContainer"] = "visibilitycontainer-class",
+            },
+            "fixture.md",
+            false);
+
+        Assert.That(rendered, Does.Contain("See VisibilityContainer."));
+        Assert.That(rendered, Does.Not.Contain("](#"));
     }
 
     [Test]

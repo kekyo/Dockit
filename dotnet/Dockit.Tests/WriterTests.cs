@@ -39,7 +39,8 @@ public sealed class WriterTests
     {
         var result = await RenderMarkdownAsync(
             DocumentationVisibilityOptions.Default,
-            false);
+            false,
+            true);
         var markdown = result.Markdown;
 
         Assert.Multiple(() =>
@@ -47,6 +48,27 @@ public sealed class WriterTests
             Assert.That(markdown, Does.Contain("| `AssemblyVersion` | &quot;1.2.3.4&quot; |"));
             Assert.That(markdown, Does.Contain("| `AssemblyInformationalVersion` | &quot;1.2.3-test+metadata&quot; |"));
             Assert.That(markdown, Does.Not.Contain("[CLSCompliant(false)]"));
+        });
+    }
+
+    [Test]
+    public async Task WriteMarkdownAsync_omits_hash_links_when_disabled()
+    {
+        var result = await RenderMarkdownAsync(
+            DocumentationVisibilityOptions.Default,
+            true,
+            false);
+        var markdown = result.Markdown;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(markdown, Does.Not.Contain("](#"));
+            Assert.That(markdown, Does.Contain("| `Fixture.Root` |"));
+            Assert.That(markdown, Does.Contain("|Event| `Changed` |"));
+            Assert.That(markdown, Does.Contain("|Event| `VisibleEvent` |"));
+            Assert.That(markdown, Does.Contain("Type remarks with VisibilityContainer"));
+            Assert.That(markdown, Does.Contain("See also: VisibilityContainer"));
+            Assert.That(markdown, Does.Contain("See also: Name"));
         });
     }
 
@@ -224,15 +246,16 @@ public sealed class WriterTests
     }
 
     private static Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync() =>
-        RenderMarkdownAsync(DocumentationVisibilityOptions.Default, true);
+        RenderMarkdownAsync(DocumentationVisibilityOptions.Default, true, true);
 
     private static Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync(
         DocumentationVisibilityOptions visibilityOptions) =>
-        RenderMarkdownAsync(visibilityOptions, true);
+        RenderMarkdownAsync(visibilityOptions, true, true);
 
     private static async Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync(
         DocumentationVisibilityOptions visibilityOptions,
-        bool includeAssemblyAttributes)
+        bool includeAssemblyAttributes,
+        bool includeHashLinks)
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var document = await FixtureArtifacts.LoadDocumentAsync();
@@ -252,6 +275,7 @@ public sealed class WriterTests
                 1,
                 visibilityOptions,
                 includeAssemblyAttributes,
+                includeHashLinks,
                 CancellationToken.None);
             return (await File.ReadAllTextAsync(path), Path.GetFileName(path));
         }

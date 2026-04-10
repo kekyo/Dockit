@@ -57,6 +57,7 @@ public static class Program
         var initialLevel = commandLine.InitialLevel;
         var visibilityOptions = commandLine.VisibilityOptions;
         var includeAssemblyAttributes = commandLine.IncludeAssemblyAttributes;
+        var includeHashLinks = commandLine.IncludeHashLinks;
 
         var referenceBasePath = Path.GetDirectoryName(assemblyPath)!;
 
@@ -81,6 +82,7 @@ public static class Program
         await Writer.WriteMarkdownAsync(
             markdownPath, assembly, dotNetDocument, initialLevel, visibilityOptions,
             includeAssemblyAttributes,
+            includeHashLinks,
             default);
 
         await outputWriter.WriteLineAsync($"Converted .NET --> Markdown");
@@ -106,6 +108,7 @@ public static class Program
         var visibility = DocumentationAccessibility.Protected;
         var editorBrowsableVisibility = DocumentationEditorBrowsableVisibility.Advanced;
         var includeAssemblyAttributes = true;
+        var includeHashLinks = true;
 
         var options = CreateOptionSet(
             value => showHelp = value,
@@ -113,7 +116,8 @@ public static class Program
             value => initialLevel = value,
             value => visibility = value,
             value => editorBrowsableVisibility = value,
-            value => includeAssemblyAttributes = value);
+            value => includeAssemblyAttributes = value,
+            value => includeHashLinks = value);
 
         List<string> remainingArguments;
         try
@@ -152,7 +156,8 @@ public static class Program
             remainingArguments[1],
             initialLevel,
             new(visibility, editorBrowsableVisibility),
-            includeAssemblyAttributes);
+            includeAssemblyAttributes,
+            includeHashLinks);
     }
 
     private static void WriteUsage(TextWriter writer)
@@ -174,6 +179,7 @@ public static class Program
             _ => { },
             _ => { },
             _ => { },
+            _ => { },
             _ => { }).
             WriteOptionDescriptions(writer);
     }
@@ -184,7 +190,8 @@ public static class Program
         Action<int> setInitialLevel,
         Action<DocumentationAccessibility> setVisibility,
         Action<DocumentationEditorBrowsableVisibility> setEditorBrowsableVisibility,
-        Action<bool> setIncludeAssemblyAttributes) =>
+        Action<bool> setIncludeAssemblyAttributes,
+        Action<bool> setIncludeHashLinks) =>
         new()
         {
             {
@@ -216,6 +223,11 @@ public static class Program
                 "no-assembly-attributes",
                 "Do not emit the assembly attribute csharp code block. The version table remains.",
                 _ => setIncludeAssemblyAttributes(false)
+            },
+            {
+                "no-hash-link",
+                "Do not emit local hash links to other items in the generated Markdown.",
+                _ => setIncludeHashLinks(false)
             },
         };
 
@@ -255,6 +267,7 @@ public static class Program
             int initialLevel,
             DocumentationVisibilityOptions visibilityOptions,
             bool includeAssemblyAttributes,
+            bool includeHashLinks,
             string? errorMessage)
         {
             this.ShowHelp = showHelp;
@@ -264,6 +277,7 @@ public static class Program
             this.InitialLevel = initialLevel;
             this.VisibilityOptions = visibilityOptions;
             this.IncludeAssemblyAttributes = includeAssemblyAttributes;
+            this.IncludeHashLinks = includeHashLinks;
             this.ErrorMessage = errorMessage;
         }
 
@@ -281,23 +295,26 @@ public static class Program
 
         public bool IncludeAssemblyAttributes { get; }
 
+        public bool IncludeHashLinks { get; }
+
         public string? ErrorMessage { get; }
 
         public static ParsedCommandLine ForHelp() =>
-            new(true, false, null, null, 1, DocumentationVisibilityOptions.Default, true, null);
+            new(true, false, null, null, 1, DocumentationVisibilityOptions.Default, true, true, null);
 
         public static ParsedCommandLine ForVersion() =>
-            new(false, true, null, null, 1, DocumentationVisibilityOptions.Default, true, null);
+            new(false, true, null, null, 1, DocumentationVisibilityOptions.Default, true, true, null);
 
         public static ParsedCommandLine FromError(string errorMessage) =>
-            new(false, false, null, null, 1, DocumentationVisibilityOptions.Default, true, errorMessage);
+            new(false, false, null, null, 1, DocumentationVisibilityOptions.Default, true, true, errorMessage);
 
         public static ParsedCommandLine FromValues(
             string assemblyPath,
             string markdownBasePath,
             int initialLevel,
             DocumentationVisibilityOptions visibilityOptions,
-            bool includeAssemblyAttributes) =>
-            new(false, false, assemblyPath, markdownBasePath, initialLevel, visibilityOptions, includeAssemblyAttributes, null);
+            bool includeAssemblyAttributes,
+            bool includeHashLinks) =>
+            new(false, false, assemblyPath, markdownBasePath, initialLevel, visibilityOptions, includeAssemblyAttributes, includeHashLinks, null);
     }
 }

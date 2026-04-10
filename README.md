@@ -72,6 +72,7 @@ Available options:
 - `--scope-visibility=VALUE`: Set the minimum accessibility to include. Supported values are `public`, `protected`, `protected-internal`, `internal`, `private-protected`, and `private`. The default is `protected`.
 - `--editor-browsable-visibility=VALUE`: Set the `EditorBrowsable` visibility to include. Supported values are `normal`, `advanced`, and `always`. The default is `advanced`.
 - `--no-assembly-attributes`: Do not emit the assembly attribute `csharp` code block. The version table remains. By default, the code block is emitted.
+- `--no-hash-link`: Do not emit local hash links to other items in the generated Markdown. Other links remain unchanged.
 
 Before you run it, make sure that:
 
@@ -126,6 +127,7 @@ Available options:
 - `-l VALUE`, `--initial-level=VALUE`: Set the base heading level of the generated Markdown. The default is `1`.
 - `-e VALUE`, `--entry=VALUE`: Add a source entry point. Can be specified multiple times.
 - `--with-metadata=PATH`: Read only the leading Markdown metadata table from the specified `package.json`.
+- `--no-hash-link`: Do not emit local hash links to other items in the generated Markdown. Other links remain unchanged.
 
 Before you run it, make sure that:
 

@@ -52,6 +52,7 @@ describe('run', () => {
     expect(outputWriter.read()).toContain('--initial-level');
     expect(outputWriter.read()).toContain('--entry');
     expect(outputWriter.read()).toContain('--with-metadata');
+    expect(outputWriter.read()).toContain('--no-hash-link');
   });
 
   it('returns success and banner when version is requested with the long option', async () => {
@@ -229,6 +230,30 @@ describe('run', () => {
       );
       expect(markdown).toMatch(/\| `buildDate` \| &quot;[^"]+&quot; \|/u);
       expect(markdown).toContain('### Box class');
+    });
+  });
+
+  it('omits hash links when --no-hash-link is specified', async () => {
+    await withTemporaryDirectory(async (outputDirectory) => {
+      const outputWriter = createCapturedWritable();
+      const errorWriter = createCapturedWritable();
+
+      const exitCode = await run(
+        ['--no-hash-link', fixturePath('ts-project'), outputDirectory],
+        outputWriter.stream,
+        errorWriter.stream
+      );
+
+      const markdown = await readUtf8File(
+        join(outputDirectory, 'dockit-ts-fixture.md')
+      );
+
+      expect(exitCode).toBe(0);
+      expect(errorWriter.read()).toBe('');
+      expect(markdown).not.toContain('](#');
+      expect(markdown).toContain('| `.` |');
+      expect(markdown).toContain('| `./extras` |');
+      expect(markdown).toContain('See also: Result');
     });
   });
 

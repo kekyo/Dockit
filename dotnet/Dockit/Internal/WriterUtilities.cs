@@ -767,7 +767,14 @@ internal static class WriterUtilities
     public static string RenderReference(
         XElement element,
         IReadOnlyDictionary<string, string> hri,
-        string markdownFileName)
+        string markdownFileName) =>
+        RenderReference(element, hri, markdownFileName, true);
+
+    public static string RenderReference(
+        XElement element,
+        IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
+        bool includeHashLinks)
     {
         var cref = element.Attribute("cref")?.Value?.Trim();
         var identity = EscapeSpecialCharacters(string.Join(" ",
@@ -806,16 +813,37 @@ internal static class WriterUtilities
             referenceKey is { Length: >= 1 } && hri.TryGetValue(referenceKey, out var anchor) ?
             string.IsNullOrWhiteSpace(resolvedIdentity) ?
                 $" {cref} " :
-                $" [{resolvedIdentity}]({GetAnchorHref(markdownFileName, anchor)}) " :
+                includeHashLinks ?
+                    $" [{resolvedIdentity}]({GetAnchorHref(markdownFileName, anchor)}) " :
+                    $" {resolvedIdentity} " :
             string.IsNullOrWhiteSpace(resolvedIdentity) ?
                 $" {cref} " :
                 $" [{resolvedIdentity}]({cref}) ";
     }
 
+    private static string RemoveSpacesBeforePunctuation(string text)
+    {
+        var sb = new StringBuilder(text.Length);
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (text[index] == ' ' &&
+                index + 1 < text.Length &&
+                ".,;:!?)]".Contains(text[index + 1]))
+            {
+                continue;
+            }
+
+            sb.Append(text[index]);
+        }
+
+        return sb.ToString();
+    }
+
     private static void TraverseAndRender(
         StringBuilder sb, XElement element, bool isInline, bool trim,
         IReadOnlyDictionary<string, string> hri,
-        string markdownFileName)
+        string markdownFileName,
+        bool includeHashLinks)
     {
         foreach (var node in element.Nodes())
         {
@@ -826,7 +854,7 @@ internal static class WriterUtilities
                     sb.AppendLine();
                     if (childElement.Nodes().Any())
                     {
-                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName);
+                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName, includeHashLinks);
                     }
                     break;
 
@@ -867,7 +895,7 @@ internal static class WriterUtilities
 
                 case XElement childElement when
                         childElement.Name == "see":
-                    sb.Append(RenderReference(childElement, hri, markdownFileName));
+                    sb.Append(RenderReference(childElement, hri, markdownFileName, includeHashLinks));
                     break;
 
                 case XElement childElement:
@@ -878,7 +906,7 @@ internal static class WriterUtilities
                     if (childElement.Nodes().Any())
                     {
                         sb.Append($"<{childElement.Name}{attributes}>");
-                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName);
+                        TraverseAndRender(sb, childElement, isInline, false, hri, markdownFileName, includeHashLinks);
                         sb.Append($"</{childElement.Name}>");
                     }
                     else
@@ -902,10 +930,21 @@ internal static class WriterUtilities
         XElement element,
         bool isInline,
         IReadOnlyDictionary<string, string> hri,
-        string markdownFileName)
+        string markdownFileName) =>
+        RenderDotNetXmlElement(element, isInline, hri, markdownFileName, true);
+
+    public static string RenderDotNetXmlElement(
+        XElement element,
+        bool isInline,
+        IReadOnlyDictionary<string, string> hri,
+        string markdownFileName,
+        bool includeHashLinks)
     {
         var sb = new StringBuilder();
-        TraverseAndRender(sb, element, isInline, true, hri, markdownFileName);
-        return sb.ToString();
+        TraverseAndRender(sb, element, isInline, true, hri, markdownFileName, includeHashLinks);
+        var rendered = sb.ToString();
+        return includeHashLinks ?
+            rendered :
+            RemoveSpacesBeforePunctuation(rendered);
     }
 }

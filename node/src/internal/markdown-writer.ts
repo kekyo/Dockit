@@ -43,6 +43,16 @@ const createAnchorHref = (markdownFileName: string, anchor: string): string => {
   return `#${anchor}`;
 };
 
+const renderOptionalHashLink = (
+  label: string,
+  markdownFileName: string,
+  anchor: string,
+  includeHashLinks: boolean
+): string =>
+  includeHashLinks
+    ? `[ ${label} ](${createAnchorHref(markdownFileName, anchor)})`
+    : label;
+
 const createAnchorElement = (anchor: string): string =>
   `<a name="${anchor}"></a>`;
 
@@ -166,7 +176,8 @@ const renderCommentDetails = (
   lines: string[],
   documentation: DocumentationComment,
   anchors: AnchorMaps,
-  markdownFileName: string
+  markdownFileName: string,
+  includeHashLinks: boolean
 ): void => {
   if (documentation.remarks !== undefined) {
     lines.push('');
@@ -185,7 +196,9 @@ const renderCommentDetails = (
       const anchor = anchors.nameAnchors.get(entry);
       return anchor === undefined
         ? escapeMarkdownText(entry)
-        : `[${escapeMarkdownText(entry)}](${createAnchorHref(markdownFileName, anchor)})`;
+        : includeHashLinks
+          ? `[${escapeMarkdownText(entry)}](${createAnchorHref(markdownFileName, anchor)})`
+          : escapeMarkdownText(entry);
     });
     lines.push('');
     lines.push(`See also: ${values.join(', ')}`);
@@ -256,7 +269,8 @@ const renderMemberIndex = (
   lines: string[],
   declaration: DeclarationDocumentation,
   anchors: AnchorMaps,
-  markdownFileName: string
+  markdownFileName: string,
+  includeHashLinks: boolean
 ): void => {
   if (declaration.members.length === 0) {
     return;
@@ -274,9 +288,13 @@ const renderMemberIndex = (
       continue;
     }
     const memberLinks = members
-      .map(
-        (member) =>
-          `[ \`${escapeMarkdownText(member.indexLabel)}\` ](${createAnchorHref(markdownFileName, anchors.memberAnchors.get(member)!)})`
+      .map((member) =>
+        renderOptionalHashLink(
+          `\`${escapeMarkdownText(member.indexLabel)}\``,
+          markdownFileName,
+          anchors.memberAnchors.get(member)!,
+          includeHashLinks
+        )
       )
       .join(', ');
     lines.push(`|${group}| ${memberLinks} |`);
@@ -310,7 +328,8 @@ const renderDeclaration = (
   declaration: DeclarationDocumentation,
   initialLevel: number,
   anchors: AnchorMaps,
-  markdownFileName: string
+  markdownFileName: string,
+  includeHashLinks: boolean
 ): void => {
   lines.push('');
   renderAnchoredSection(
@@ -323,8 +342,20 @@ const renderDeclaration = (
   renderSignatureBlock(lines, declaration.signatureLines);
   renderEnumValueTable(lines, declaration);
   renderDocumentationTables(lines, declaration);
-  renderCommentDetails(lines, declaration, anchors, markdownFileName);
-  renderMemberIndex(lines, declaration, anchors, markdownFileName);
+  renderCommentDetails(
+    lines,
+    declaration,
+    anchors,
+    markdownFileName,
+    includeHashLinks
+  );
+  renderMemberIndex(
+    lines,
+    declaration,
+    anchors,
+    markdownFileName,
+    includeHashLinks
+  );
 
   for (const member of declaration.members) {
     lines.push('');
@@ -337,7 +368,13 @@ const renderDeclaration = (
     renderCommentBlock(lines, member);
     renderSignatureBlock(lines, member.signatureLines);
     renderDocumentationTables(lines, member);
-    renderCommentDetails(lines, member, anchors, markdownFileName);
+    renderCommentDetails(
+      lines,
+      member,
+      anchors,
+      markdownFileName,
+      includeHashLinks
+    );
   }
 };
 
@@ -345,7 +382,8 @@ const renderModuleIndex = (
   lines: string[],
   moduleDocumentation: ModuleDocumentation,
   anchors: AnchorMaps,
-  markdownFileName: string
+  markdownFileName: string,
+  includeHashLinks: boolean
 ): void => {
   lines.push('');
   lines.push('|Type|Members|');
@@ -353,13 +391,22 @@ const renderModuleIndex = (
 
   for (const declaration of moduleDocumentation.declarations) {
     const memberList = declaration.members
-      .map(
-        (member) =>
-          `[ \`${escapeMarkdownText(member.indexLabel)}\` ](${createAnchorHref(markdownFileName, anchors.memberAnchors.get(member)!)})`
+      .map((member) =>
+        renderOptionalHashLink(
+          `\`${escapeMarkdownText(member.indexLabel)}\``,
+          markdownFileName,
+          anchors.memberAnchors.get(member)!,
+          includeHashLinks
+        )
       )
       .join(', ');
     lines.push(
-      `| [ \`${escapeMarkdownText(declaration.indexLabel)}\` ](${createAnchorHref(markdownFileName, anchors.declarationAnchors.get(declaration)!)}) | ${memberList} |`
+      `| ${renderOptionalHashLink(
+        `\`${escapeMarkdownText(declaration.indexLabel)}\``,
+        markdownFileName,
+        anchors.declarationAnchors.get(declaration)!,
+        includeHashLinks
+      )} | ${memberList} |`
     );
   }
 };
@@ -369,7 +416,8 @@ const renderModule = (
   moduleDocumentation: ModuleDocumentation,
   initialLevel: number,
   anchors: AnchorMaps,
-  markdownFileName: string
+  markdownFileName: string,
+  includeHashLinks: boolean
 ): void => {
   lines.push('');
   renderAnchoredSection(
@@ -378,7 +426,13 @@ const renderModule = (
     moduleDocumentation.title,
     anchors.moduleAnchors.get(moduleDocumentation)!
   );
-  renderModuleIndex(lines, moduleDocumentation, anchors, markdownFileName);
+  renderModuleIndex(
+    lines,
+    moduleDocumentation,
+    anchors,
+    markdownFileName,
+    includeHashLinks
+  );
 
   for (const declaration of moduleDocumentation.declarations) {
     renderDeclaration(
@@ -386,7 +440,8 @@ const renderModule = (
       declaration,
       initialLevel,
       anchors,
-      markdownFileName
+      markdownFileName,
+      includeHashLinks
     );
   }
 };
@@ -410,12 +465,14 @@ export const getMarkdownOutputPath = (
  * @param packageDocumentation Extracted API documentation model.
  * @param packageMetadata Package metadata rows rendered ahead of the API sections.
  * @param initialLevel Base heading level for the generated Markdown.
+ * @param includeHashLinks Whether local hash links to other generated items should be emitted.
  */
 export const writeMarkdown = async (
   markdownPath: string,
   packageDocumentation: PackageDocumentation,
   packageMetadata: PackageMetadata,
-  initialLevel: number
+  initialLevel: number,
+  includeHashLinks: boolean
 ): Promise<void> => {
   const anchors = createAnchorMaps(packageDocumentation);
   const markdownFileName = basename(markdownPath);
@@ -444,13 +501,22 @@ export const writeMarkdown = async (
 
   for (const moduleDocumentation of packageDocumentation.modules) {
     const declarationLinks = moduleDocumentation.declarations
-      .map(
-        (declaration) =>
-          `[ \`${escapeMarkdownText(declaration.indexLabel)}\` ](${createAnchorHref(markdownFileName, anchors.declarationAnchors.get(declaration)!)})`
+      .map((declaration) =>
+        renderOptionalHashLink(
+          `\`${escapeMarkdownText(declaration.indexLabel)}\``,
+          markdownFileName,
+          anchors.declarationAnchors.get(declaration)!,
+          includeHashLinks
+        )
       )
       .join(', ');
     lines.push(
-      `| [ \`${escapeMarkdownText(moduleDocumentation.exportPath)}\` ](${createAnchorHref(markdownFileName, anchors.moduleAnchors.get(moduleDocumentation)!)}) | ${declarationLinks} |`
+      `| ${renderOptionalHashLink(
+        `\`${escapeMarkdownText(moduleDocumentation.exportPath)}\``,
+        markdownFileName,
+        anchors.moduleAnchors.get(moduleDocumentation)!,
+        includeHashLinks
+      )} | ${declarationLinks} |`
     );
   }
 
@@ -460,7 +526,8 @@ export const writeMarkdown = async (
       moduleDocumentation,
       initialLevel,
       anchors,
-      markdownFileName
+      markdownFileName,
+      includeHashLinks
     );
   }
 

@@ -63,7 +63,8 @@ describe('writeMarkdown', () => {
         markdownPath,
         packageDocumentation,
         packageMetadata,
-        1
+        1,
+        true
       );
       const markdown = await readUtf8File(markdownPath);
 
@@ -227,7 +228,8 @@ describe('writeMarkdown', () => {
         markdownPath,
         packageDocumentation,
         packageMetadata,
-        1
+        1,
+        true
       );
       const markdown = await readUtf8File(markdownPath);
 
@@ -263,6 +265,34 @@ describe('writeMarkdown', () => {
       expect(chooseModeParameterTableIndex).toBeLessThan(
         chooseModeReturnTableIndex
       );
+    });
+  });
+
+  it('omits hash links when disabled', async () => {
+    const packageDocumentation = await analyzeProject(
+      fixturePath('ts-project')
+    );
+    const packageMetadata = createPackageMetadata();
+
+    await withTemporaryDirectory(async (outputDirectory) => {
+      const markdownPath = getMarkdownOutputPath(
+        outputDirectory,
+        packageDocumentation.packageName
+      );
+      await writeMarkdown(
+        markdownPath,
+        packageDocumentation,
+        packageMetadata,
+        1,
+        false
+      );
+      const markdown = await readUtf8File(markdownPath);
+
+      expect(markdown).not.toContain('](#');
+      expect(markdown).toContain('| `.` |');
+      expect(markdown).toContain('| `./extras` |');
+      expect(markdown).toContain('| `createResult()` |');
+      expect(markdown).toContain('See also: Result');
     });
   });
 });
