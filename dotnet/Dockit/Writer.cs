@@ -811,6 +811,23 @@ internal static class Writer
             dotNetDocument,
             initialLevel,
             DocumentationVisibilityOptions.Default,
+            true,
+            ct);
+
+    public static Task WriteMarkdownAsync(
+        string markdownPath,
+        AssemblyDefinition assembly,
+        DotNetXmlDocument dotNetDocument,
+        int initialLevel,
+        DocumentationVisibilityOptions visibilityOptions,
+        CancellationToken ct) =>
+        WriteMarkdownAsync(
+            markdownPath,
+            assembly,
+            dotNetDocument,
+            initialLevel,
+            visibilityOptions,
+            true,
             ct);
 
     public static async Task WriteMarkdownAsync(
@@ -819,6 +836,7 @@ internal static class Writer
         DotNetXmlDocument dotNetDocument,
         int initialLevel,
         DocumentationVisibilityOptions visibilityOptions,
+        bool includeAssemblyAttributes,
         CancellationToken ct)
     {
         if (assembly.Name.Name != dotNetDocument.AssemblyName)
@@ -857,7 +875,7 @@ internal static class Writer
         }
 
         var assemblyCustomAttributes = WriterUtilities.GetCustomAttributeDeclarations(assembly);
-        if (assemblyCustomAttributes.Length >= 1)
+        if (includeAssemblyAttributes && assemblyCustomAttributes.Length >= 1)
         {
             await tw.WriteLineAsync();
             await tw.WriteLineAsync("```csharp");

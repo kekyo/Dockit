@@ -35,6 +35,22 @@ public sealed class WriterTests
     }
 
     [Test]
+    public async Task WriteMarkdownAsync_omits_assembly_attribute_code_block_when_disabled()
+    {
+        var result = await RenderMarkdownAsync(
+            DocumentationVisibilityOptions.Default,
+            false);
+        var markdown = result.Markdown;
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(markdown, Does.Contain("| `AssemblyVersion` | &quot;1.2.3.4&quot; |"));
+            Assert.That(markdown, Does.Contain("| `AssemblyInformationalVersion` | &quot;1.2.3-test+metadata&quot; |"));
+            Assert.That(markdown, Does.Not.Contain("[CLSCompliant(false)]"));
+        });
+    }
+
+    [Test]
     public async Task WriteMarkdownAsync_writes_generic_type_sections_and_xml_comment_content()
     {
         var result = await RenderMarkdownAsync();
@@ -207,8 +223,16 @@ public sealed class WriterTests
         }
     }
 
+    private static Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync() =>
+        RenderMarkdownAsync(DocumentationVisibilityOptions.Default, true);
+
+    private static Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync(
+        DocumentationVisibilityOptions visibilityOptions) =>
+        RenderMarkdownAsync(visibilityOptions, true);
+
     private static async Task<(string Markdown, string MarkdownFileName)> RenderMarkdownAsync(
-        DocumentationVisibilityOptions? visibilityOptions = null)
+        DocumentationVisibilityOptions visibilityOptions,
+        bool includeAssemblyAttributes)
     {
         using var assembly = FixtureArtifacts.ReadAssembly();
         var document = await FixtureArtifacts.LoadDocumentAsync();
@@ -226,7 +250,8 @@ public sealed class WriterTests
                 assembly,
                 document,
                 1,
-                visibilityOptions ?? DocumentationVisibilityOptions.Default,
+                visibilityOptions,
+                includeAssemblyAttributes,
                 CancellationToken.None);
             return (await File.ReadAllTextAsync(path), Path.GetFileName(path));
         }

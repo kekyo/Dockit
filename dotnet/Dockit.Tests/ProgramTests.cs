@@ -48,6 +48,7 @@ public sealed class ProgramTests
             Assert.That(outputWriter.ToString(), Does.Contain("--initial-level"));
             Assert.That(outputWriter.ToString(), Does.Contain("--scope-visibility"));
             Assert.That(outputWriter.ToString(), Does.Contain("--editor-browsable-visibility"));
+            Assert.That(outputWriter.ToString(), Does.Contain("--no-assembly-attributes"));
         });
     }
 
@@ -143,6 +144,52 @@ public sealed class ProgramTests
                 Assert.That(markdown, Does.Contain("### InternalOnlyType class"));
                 Assert.That(markdown, Does.Contain("#### HiddenByEditorBrowsableField field"));
                 Assert.That(markdown, Does.Contain("#### HiddenMethod() method"));
+            });
+        }
+        finally
+        {
+            if (Directory.Exists(outputDirectory))
+            {
+                Directory.Delete(outputDirectory, true);
+            }
+        }
+    }
+
+    [Test]
+    public async Task RunAsync_omits_assembly_attribute_code_block_when_no_assembly_attributes_is_specified()
+    {
+        using var outputWriter = new StringWriter();
+        using var errorWriter = new StringWriter();
+
+        var outputDirectory = Path.Combine(
+            TestContext.CurrentContext.WorkDirectory,
+            $"program-{Guid.NewGuid():N}");
+
+        Directory.CreateDirectory(outputDirectory);
+        try
+        {
+            var exitCode = await Program.RunAsync(
+                new[]
+                {
+                    "--no-assembly-attributes",
+                    FixtureArtifacts.AssemblyPath,
+                    outputDirectory,
+                },
+                outputWriter,
+                errorWriter);
+
+            var markdownPath = Path.Combine(
+                outputDirectory,
+                Path.GetFileNameWithoutExtension(FixtureArtifacts.AssemblyPath) + ".md");
+            var markdown = await File.ReadAllTextAsync(markdownPath);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(exitCode, Is.EqualTo(0));
+                Assert.That(errorWriter.ToString(), Is.EqualTo(string.Empty));
+                Assert.That(markdown, Does.Contain("| `AssemblyVersion` | &quot;1.2.3.4&quot; |"));
+                Assert.That(markdown, Does.Contain("| `AssemblyFileVersion` | &quot;4.3.2.1&quot; |"));
+                Assert.That(markdown, Does.Not.Contain("[CLSCompliant(false)]"));
             });
         }
         finally

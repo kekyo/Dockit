@@ -68,6 +68,7 @@ dockit-dotnet [options] <assembly-path> <output-directory>
 - `-l VALUE`, `--initial-level=VALUE`: 生成される Markdown の見出し開始レベルを設定します。デフォルトは `1` です。
 - `--scope-visibility=VALUE`: 生成対象に含める最小アクセシビリティを設定します。指定できる値は `public`、`protected`、`protected-internal`、`internal`、`private-protected`、`private` です。デフォルトは `protected` です。
 - `--editor-browsable-visibility=VALUE`: 生成対象に含める `EditorBrowsable` 可視性を設定します。指定できる値は `normal`、`advanced`、`always` です。デフォルトは `advanced` です。
+- `--no-assembly-attributes`: アセンブリ属性の `csharp` コードブロックを出力しません。バージョンテーブルは残ります。デフォルトではコードブロックも出力されます。
 
 実行前に、以下を確認してください。
 
